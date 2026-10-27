@@ -1,0 +1,44 @@
+language: python
+dist: jammy
+python:
+  - "3.11"
+
+services:
+  - postgresql
+
+env:
+  global:
+    - POSTGRES_DB=team5
+    - POSTGRES_USER=postgres
+    - POSTGRES_PASSWORD=postgres
+    - POSTGRES_HOST=localhost
+    - POSTGRES_PORT=5432
+
+install:
+  - pip install -r requirements-dev.txt
+  - pip install coveralls
+
+before_script:
+  - psql -U postgres -c "ALTER USER postgres PASSWORD 'postgres';"
+  - psql -U postgres -c "CREATE DATABASE team5;"
+
+script:
+  - black --check .
+  - flake8
+  - coverage run manage.py test
+  - coverage report
+
+after_success:
+  - coveralls
+
+deploy:
+  provider: elasticbeanstalk
+  edge: true
+  region: "us-east-1"
+  app: "team5"
+  env: "team5-develop"
+  bucket: "elasticbeanstalk-us-east-1-390844769109"
+  access_key_id: "$AWS_ACCESS_KEY_ID"
+  secret_access_key: "$AWS_SECRET_ACCESS_KEY"
+  on:
+    branch: develop
