@@ -74,10 +74,57 @@ choosing several boroughs or categories matches any of them. Dates use New
 York time, and an event matches a date range when it overlaps it. The
 **Today**, **This weekend**, and **This month** buttons fill in the dates.
 
-Boroughs come from the first letter of an event's NYC Parks property ID, so
-events without one, such as those at community gardens or libraries, don't
-appear when a borough is selected. Categories are groups of the feed's own
-category names, defined in `events/filters.py`.
+For feed events, boroughs come from the first letter of the NYC Parks
+property ID, so feed events without one, such as those at community gardens
+or libraries, don't appear when a borough is selected. Categories are groups
+of the feed's own category names, defined in `events/filters.py`.
+
+## Posting events
+
+Signed-in users can post their own events at `/events/new/`, linked as
+**Post an event** on the home page. Hosts choose a borough and categories from
+the same lists as the filter bar, so their events appear in search, filters,
+and the home page like NYC Parks events. Times are entered in New York time.
+
+Hosts see an **Edit event** button on their own events' detail pages, at
+`/events/<id>/edit/`. Only the host can edit an event, and only until it ends;
+NYC Parks feed events can't be edited. A start time that was already in the
+past can stay as it is, so hosts can still correct events that are under way.
+
+The hourly sync never edits hosted events. It marks them done once they end,
+or after the day they start if they have no end time.
+
+## Notifications
+
+While an event is upcoming, its host can message everyone who selected
+**Interested** or **Want to Attend** from the event's detail page. The host
+sees how many people will get it, but not who they are. Each person gets an
+email and an in-app notification. When a host changes an event's date, time, or location,
+interested users are told automatically.
+
+Signed-in users see a **Notifications** link on the home page with their
+unread count. `/notifications/` lists contact requests first, then event
+updates and discussion replies, with the newest items first within each
+group. Event updates and reply alerts are marked read when displayed.
+Pending contact requests keep their **New** badge and remain in the unread
+count until accepted or declined.
+
+Replies to discussion posts notify the original author in-app, except when
+replying to your own post. Reply notifications do not send email.
+
+To connect with someone, select **Interested** or **Want to Attend** on an
+upcoming event, open a shared attendee profile preview in either group,
+optionally add an introduction, and click **Send Contact Request**. The
+recipient gets an in-app notification with **Accept** and **Decline** buttons;
+they can also respond from the event page. Both actions mark the request
+notification read. If the
+recipient allows direct contact, the request is automatically accepted and
+appears as an already-read introduction. Senders receive no response
+notifications, and contact requests do not send emails. Existing pending
+requests are included when the notification migrations are applied.
+
+In development, event-update emails are printed to the `runserver` console
+instead of being sent.
 
 ## Cron job (hourly sync)
 

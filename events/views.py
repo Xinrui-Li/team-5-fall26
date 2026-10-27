@@ -1,19 +1,162 @@
-"""Views for the landing page and public event search."""
+"""Views for the landing page, public event search, and hosted events."""
 
 from urllib.parse import quote, urlencode
+from uuid import uuid4
 
-from django.contrib.auth import get_user_model
-from django.db.models import F
-from django.http import QueryDict
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Case, F, Value, When
+from django.http import Http404, QueryDict
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
-from django.views.generic import DetailView, ListView, TemplateView
+from django.utils import timezone
+from django.views.decorators.http import require_POST
+from django.views.generic import (
+    CreateView,
+    DetailView,
+    ListView,
+    TemplateView,
+    UpdateView,
+)
 
 from .filters import EventFilterForm, filter_events, filter_params
-from .models import ContactRequest, Event, EventInterest, EventPost
+from .forms import EventListingForm, NotifyAttendeesForm
+from .models import ContactRequest, Event, EventInterest, EventPost, Notification
+from .notifications import change_notice, interested_recipients, notify_interested
 from .search import search_events
 
 UPCOMING_EVENT_LIMIT = 20
 SEARCH_PAGE_SIZE = 20
+NOTIFICATION_PAGE_SIZE = 20
+
+
+class EventCreateView(LoginRequiredMixin, CreateView):
+    """Let a signed-in user post an event that everyone can discover."""
+
+    model = Event
+    form_class = EventListingForm
+    template_name = "events/event_form.html"
+
+    def form_valid(self, form):
+        """Make the current user the host and give the event its own ID."""
+        form.instance.host = self.request.user
+        form.instance.guid = Event.HOSTED_GUID_PREFIX + uuid4().hex
+        response = super().form_valid(form)
+        messages.success(self.request, "Your event is posted.")
+        return response
+
+    def get_success_url(self):
+        """Show the new event's detail page."""
+        return reverse("event_detail", args=[self.object.pk])
+
+
+def get_hosted_upcoming_event(user, pk):
+    """Return an event the user hosts that has not ended yet.
+
+    Other users' events, NYC Parks feed events, and events that have ended
+    are reported as not found.
+    """
+    event = get_object_or_404(Event, pk=pk, host=user)
+    if event.has_ended:
+        raise Http404("This event has ended.")
+    return event
+
+
+def people(count):
+    """Return e.g. "1 interested person" or "3 interested people"."""
+    return f"{count} interested {'person' if count == 1 else 'people'}"
+
+
+class EventUpdateView(LoginRequiredMixin, UpdateView):
+    """Let a host edit their own event until it ends.
+
+    Changing the date, time, or location notifies everyone interested.
+    """
+
+    form_class = EventListingForm
+    template_name = "events/event_form.html"
+
+    def get_object(self, queryset=None):
+        """Only the host can edit, and only before the event ends."""
+        return get_hosted_upcoming_event(self.request.user, self.kwargs["pk"])
+
+    def form_valid(self, form):
+        """Save the changes, notify interested users, and confirm on the page."""
+        notice = change_notice(form.instance, form.initial, form.changed_data)
+        response = super().form_valid(form)
+        confirmation = "Event updated."
+        if notice:
+            event_url = self.request.build_absolute_uri(self.get_success_url())
+            count = notify_interested(self.object, *notice, event_url=event_url)
+            if count:
+                confirmation += f" We let {people(count)} know about the change."
+        messages.success(self.request, confirmation)
+        return response
+
+    def get_success_url(self):
+        """Show the updated event's detail page."""
+        return reverse("event_detail", args=[self.object.pk])
+
+
+@login_required
+@require_POST
+def notify_attendees(request, pk):
+    """Send the host's message to everyone interested in their event."""
+    event = get_hosted_upcoming_event(request.user, pk)
+    detail_url = reverse("event_detail", args=[event.pk])
+    form = NotifyAttendeesForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Write a subject and a message before sending.")
+        return redirect(detail_url)
+    count = notify_interested(
+        event,
+        form.cleaned_data["subject"],
+        form.cleaned_data["message"],
+        event_url=request.build_absolute_uri(detail_url),
+    )
+    if count:
+        messages.success(request, f"Your message was sent to {people(count)}.")
+    else:
+        messages.info(request, "Nobody is interested in this event yet.")
+    return redirect(detail_url)
+
+
+class NotificationListView(LoginRequiredMixin, ListView):
+    """List contact requests first, newest first within each group.
+
+    Displayed event updates become read. Pending contact requests stay new
+    until the recipient resolves them.
+    """
+
+    template_name = "events/notifications.html"
+    context_object_name = "notifications"
+    paginate_by = NOTIFICATION_PAGE_SIZE
+
+    def get_queryset(self):
+        """Order both groups before pagination and load request context."""
+        return (
+            self.request.user.notifications.select_related(
+                "event", "contact_request__sender"
+            )
+            .annotate(
+                _request_priority=Case(
+                    When(contact_request__isnull=False, then=Value(0)),
+                    default=Value(1),
+                )
+            )
+            .order_by("_request_priority", "-created_at", "-pk")
+        )
+
+    def get_context_data(self, **kwargs):
+        """Mark only displayed event updates read."""
+        context = super().get_context_data(**kwargs)
+        shown = context["notifications"]
+        unread = [
+            n.pk for n in shown if n.read_at is None and n.contact_request_id is None
+        ]
+        Notification.objects.filter(pk__in=unread).update(read_at=timezone.now())
+        return context
 
 
 class EventDetailView(DetailView):
@@ -24,36 +167,49 @@ class EventDetailView(DetailView):
     context_object_name = "event"
 
     def get_context_data(self, **kwargs):
-        """Add interests, public attendee profiles, and discussions."""
+        """Add attendance intentions, attendee profiles, and discussions."""
         context = super().get_context_data(**kwargs)
+
         event = self.object
         user = self.request.user
         is_authenticated = user.is_authenticated
 
-        context["interest_count"] = EventInterest.objects.filter(event=event).count()
+        # Get all attendance intention records for this event.
+        interests = EventInterest.objects.filter(event=event)
 
-        context["user_has_interest"] = (
-            EventInterest.objects.filter(event=event, user=user).exists()
-            if is_authenticated
-            else False
+        # Count intentions directly from the database.
+        context["interest_count"] = interests.count()
+        context["interested_count"] = interests.filter(
+            status=EventInterest.Status.INTERESTED
+        ).count()
+        context["want_to_attend_count"] = interests.filter(
+            status=EventInterest.Status.WANT_TO_ATTEND
+        ).count()
+
+        # Get the current user's selected intention.
+        current_interest = (
+            interests.filter(user=user).first() if is_authenticated else None
         )
 
+        context["user_has_interest"] = current_interest is not None
+        context["current_interest_status"] = (
+            current_interest.status if current_interest else ""
+        )
+
+        # Control whether users can interact with the event.
         context["can_interact"] = (
             is_authenticated and event.status == Event.Status.UPCOMING
         )
+        context["can_manage"] = (
+            is_authenticated and event.host_id == user.pk and not event.has_ended
+        )
 
-        User = get_user_model()
-        attendee_query = User.objects.filter(
-            share_profile_with_attendees=True,
-            event_interests__event=event,
-        ).distinct()
+        if context["can_manage"]:
+            context["recipient_count"] = interested_recipients(event).count()
 
-        if is_authenticated:
-            attendee_query = attendee_query.exclude(pk=user.pk)
-
-        attendees = list(attendee_query.order_by("display_name", "username"))
-
+        # Find contact requests sent by the current user.
         request_by_recipient = {}
+
         if is_authenticated:
             requests = (
                 ContactRequest.objects.filter(
@@ -70,20 +226,47 @@ class EventDetailView(DetailView):
                     contact_request,
                 )
 
-        context["attendees"] = [
+        # Include all users who have chosen to share their profiles.
+        # Do not exclude the current user: their avatar should also move
+        # between the two groups when they change their intention.
+        visible_interests = (
+            interests.filter(user__share_profile_with_attendees=True)
+            .select_related("user")
+            .order_by("user__display_name", "user__username")
+        )
+
+        attendees = [
             {
-                "user": attendee,
-                "contact_request": request_by_recipient.get(attendee.pk),
+                "user": interest.user,
+                "status": interest.status,
+                "contact_request": request_by_recipient.get(interest.user_id),
             }
-            for attendee in attendees
+            for interest in visible_interests
         ]
 
+        # Split the same attendee list into the two intention groups.
+        context["interested_users"] = [
+            attendee
+            for attendee in attendees
+            if attendee["status"] == EventInterest.Status.INTERESTED
+        ]
+
+        context["want_to_attend_users"] = [
+            attendee
+            for attendee in attendees
+            if attendee["status"] == EventInterest.Status.WANT_TO_ATTEND
+        ]
+
+        context["attendees"] = attendees
+
+        # Event discussion posts and replies.
         context["posts"] = (
             EventPost.objects.filter(event=event)
             .select_related("author")
             .prefetch_related("replies__author")
         )
 
+        # Contact requests received by the current user.
         context["received_contact_requests"] = (
             ContactRequest.objects.filter(
                 event=event,
