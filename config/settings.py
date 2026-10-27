@@ -24,12 +24,24 @@ load_dotenv(BASE_DIR / ".env")
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-j=kj3&w*a)d5(t30&+gx56vjncy%#3+ktx5t4-3_kc15@!a6gc"
+# Set DJANGO_SECRET_KEY in production; the fallback is for local development.
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-j=kj3&w*a)d5(t30&+gx56vjncy%#3+ktx5t4-3_kc15@!a6gc",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Set DJANGO_DEBUG=False on Elastic Beanstalk.
+DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("1", "true", "yes")
 
-ALLOWED_HOSTS = []
+# Local hosts plus any Elastic Beanstalk domain (*.elasticbeanstalk.com).
+# Add more hosts as a comma-separated DJANGO_ALLOWED_HOSTS value.
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".elasticbeanstalk.com"]
+ALLOWED_HOSTS += [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+]
 
 # Application definition
 
@@ -85,14 +97,21 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# On Elastic Beanstalk, an attached RDS database provides the RDS_* variables.
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "team5"),
-        "USER": os.environ.get("POSTGRES_USER", "team5"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "team5"),
-        "HOST": os.environ.get("POSTGRES_HOST", "127.0.0.1"),
-        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "NAME": os.environ.get("RDS_DB_NAME", os.environ.get("POSTGRES_DB", "team5")),
+        "USER": os.environ.get(
+            "RDS_USERNAME", os.environ.get("POSTGRES_USER", "team5")
+        ),
+        "PASSWORD": os.environ.get(
+            "RDS_PASSWORD", os.environ.get("POSTGRES_PASSWORD", "team5")
+        ),
+        "HOST": os.environ.get(
+            "RDS_HOSTNAME", os.environ.get("POSTGRES_HOST", "127.0.0.1")
+        ),
+        "PORT": os.environ.get("RDS_PORT", os.environ.get("POSTGRES_PORT", "5432")),
     }
 }
 
@@ -141,6 +160,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+# collectstatic gathers files here; Elastic Beanstalk serves them at /static.
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

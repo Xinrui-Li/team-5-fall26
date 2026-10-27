@@ -159,3 +159,33 @@ flake8
 coverage run manage.py test
 coverage report  # fails below 95% coverage
 ```
+
+## Deploying to AWS Elastic Beanstalk
+
+The repo is configured for Elastic Beanstalk's Python platform:
+`.ebextensions/django.config` sets `DJANGO_SETTINGS_MODULE`, the WSGI path
+(`config.wsgi:application`), and the `/static` mapping, and runs `migrate`,
+`collectstatic`, and an initial `sync_events` on each deploy. Settings read the
+`RDS_*` variables that Elastic Beanstalk provides when a database is attached,
+and `*.elasticbeanstalk.com` is already in `ALLOWED_HOSTS`.
+
+Install the [EB CLI](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/eb-cli3-install.html)
+and configure AWS credentials for an IAM user (never the root account, and
+never commit keys). Then, from the repo root on the `develop` branch:
+
+```bash
+eb init -p "python-3.11" team5 --region us-east-1
+eb init                      # answer "yes" to set up SSH, pick or create a key pair
+eb create team5-develop --single --instance_type t3.micro \
+  --database --database.engine postgres --database.instance db.t3.micro \
+  --database.username team5admin --database.password '<choose-a-password>' \
+  --envvars DJANGO_SECRET_KEY='<random-secret>'
+eb open
+```
+
+Deploy later commits with `eb deploy`. The EB CLI deploys the last commit, so
+commit changes first. `eb terminate team5-develop` removes the environment
+and its database. If instances report degraded health because there is no
+default VPC, create one in the AWS VPC console (Actions → Create default VPC).
+Uploaded profile photos are stored on the instance and are lost when it is
+replaced.
