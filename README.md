@@ -1,8 +1,11 @@
 # Team Project repo
 
-[![Checks](https://github.com/gcivil-nyu-org/team-5-fall26/actions/workflows/checks.yml/badge.svg?event=pull_request)](https://github.com/gcivil-nyu-org/team-5-fall26/actions/workflows/checks.yml?query=event%3Apull_request)
+[![Checks](https://github.com/gcivil-nyu-org/team-5-fall26/actions/workflows/checks.yml/badge.svg?branch=develop)](https://github.com/gcivil-nyu-org/team-5-fall26/actions/workflows/checks.yml?query=branch%3Adevelop)
+
 [![Build Status](https://app.travis-ci.com/gcivil-nyu-org/team-5-fall26.svg?branch=develop)](https://app.travis-ci.com/github/gcivil-nyu-org/team-5-fall26)
+
 [![Coverage Status](https://coveralls.io/repos/github/gcivil-nyu-org/team-5-fall26/badge.svg?branch=develop)](https://coveralls.io/github/gcivil-nyu-org/team-5-fall26?branch=develop)
+
 
 ## Local development
 
