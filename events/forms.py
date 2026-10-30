@@ -180,3 +180,52 @@ class ContactRequestForm(forms.ModelForm):
             ),
         }
         labels = {"message": "Message (optional)"}
+
+
+class ContactStartForm(forms.Form):
+    """Choose a shared upcoming event and optionally introduce yourself."""
+
+    event = forms.ModelChoiceField(
+        queryset=Event.objects.none(),
+        label="Shared event",
+    )
+    message = forms.CharField(
+        label="Introduction (optional)",
+        required=False,
+        max_length=500,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "placeholder": "Introduce yourself (optional)...",
+            }
+        ),
+    )
+
+    def __init__(self, *args, shared_events, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["event"].queryset = shared_events
+
+    def clean_message(self):
+        return self.cleaned_data["message"].strip()
+
+
+class DirectMessageForm(forms.Form):
+    """Compose a private message."""
+
+    body = forms.CharField(
+        label="Message",
+        max_length=5000,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 2,
+                "placeholder": "Write a message...",
+                "aria-label": "Write a message",
+            }
+        ),
+    )
+
+    def clean_body(self):
+        body = self.cleaned_data["body"].strip()
+        if not body:
+            raise forms.ValidationError("Your message cannot be empty.")
+        return body

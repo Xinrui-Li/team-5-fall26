@@ -11,6 +11,7 @@
 <body>
     <main class="notifications-page">
         <a class="search-back" href="{% url 'landing' %}">Back to home</a>
+        <a class="search-back" href="{% url 'inbox' %}">Messages</a>
         <h1>Notifications</h1>
 
         {% if notifications %}
@@ -43,7 +44,7 @@
                 </div>
                 {% elif contact_request.status == "accepted" %}
                 <div class="notification-actions">
-                    <a class="notification-message" href="/messages/{{ contact_request.sender.pk }}/" aria-label="Message {{ contact_request.sender.get_display_name }}">Message</a>
+                    <a class="notification-message" href="{% url 'message_user' contact_request.sender.pk %}" aria-label="Message {{ contact_request.sender.get_display_name }}">Message</a>
                 </div>
                 {% endif %}
                 {% endwith %}

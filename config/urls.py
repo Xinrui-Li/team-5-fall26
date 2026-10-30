@@ -24,6 +24,13 @@ from events.views import (
     NotificationListView,
     SearchView,
 )
+from events.messaging_views import (
+    InboxView,
+    conversation,
+    conversation_updates,
+    message_user,
+    unread_message_count,
+)
 
 urlpatterns = [
     # Landing page at root "/" (login success target); lists upcoming events
@@ -31,6 +38,27 @@ urlpatterns = [
     path("search", SearchView.as_view(), name="search"),
     path("events/<int:pk>/", EventDetailView.as_view(), name="event_detail"),
     path("events/", include("events.urls")),
+    path("messages/", InboxView.as_view(), name="inbox"),
+    path(
+        "messages/unread-count/",
+        unread_message_count,
+        name="unread_message_count",
+    ),
+    path(
+        "messages/<int:user_id>/",
+        message_user,
+        name="message_user",
+    ),
+    path(
+        "messages/conversations/<int:conversation_id>/",
+        conversation,
+        name="conversation",
+    ),
+    path(
+        "messages/conversations/<int:conversation_id>/updates/",
+        conversation_updates,
+        name="conversation_updates",
+    ),
     path("notifications/", NotificationListView.as_view(), name="notifications"),
     # Move home page to /home/, avoid conflicting with root
     path(

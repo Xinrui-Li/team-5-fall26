@@ -244,6 +244,86 @@ class ContactRequest(models.Model):
         return f"{self.sender} → {self.recipient} ({self.status})"
 
 
+class Conversation(models.Model):
+    """A private message thread shared by a pair of users."""
+
+    user_one = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="conversations_as_one",
+    )
+    user_two = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="conversations_as_two",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user_one", "user_two"],
+                name="unique_user_pair_conversation",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(user_one__lt=models.F("user_two")),
+                name="conversation_users_in_order",
+            ),
+        ]
+
+    @classmethod
+    def get_or_create_for_users(cls, first_user, second_user):
+        """Return the single pair thread with participant IDs in order."""
+        if first_user.pk == second_user.pk:
+            raise ValueError("A conversation requires two different users.")
+        user_one, user_two = sorted((first_user, second_user), key=lambda user: user.pk)
+        return cls.objects.get_or_create(user_one=user_one, user_two=user_two)
+
+    def other_participant(self, user):
+        """Return the other participant, or None when user is not in thread."""
+        if user.pk == self.user_one_id:
+            return self.user_two
+        if user.pk == self.user_two_id:
+            return self.user_one
+        return None
+
+    def __str__(self):
+        return f"Conversation: {self.user_one} ↔ {self.user_two}"
+
+
+class DirectMessage(models.Model):
+    """A message within a pair-level conversation, optionally about an event."""
+
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name="messages",
+    )
+    sender = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.CASCADE,
+        related_name="direct_messages",
+    )
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="direct_messages",
+    )
+    body = models.TextField(max_length=5000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField("read at", null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+
+    def __str__(self):
+        return f"Message from {self.sender} in conversation {self.conversation_id}"
+
+
 class EventPost(models.Model):
     """A discussion post associated with an event."""
 

@@ -108,11 +108,10 @@ email and an in-app notification. When a host changes an event's date, time, or 
 interested users are told automatically.
 
 Signed-in users see a **Notifications** link on the home page with their
-unread count. `/notifications/` lists contact requests first, then event
-updates and discussion replies, with the newest items first within each
-group. Event updates and reply alerts are marked read when displayed.
-Pending contact requests keep their **New** badge and remain in the unread
-count until accepted or declined.
+unread count. `/notifications/` lists contact requests first, followed by
+event updates and discussion replies, with the newest items first within each
+group. Event updates and reply alerts are marked read when displayed. Pending
+contact requests remain unread until accepted or declined.
 
 Replies to discussion posts notify the original author in-app, except when
 replying to your own post. Reply notifications do not send email.
@@ -127,6 +126,17 @@ recipient allows direct contact, the request is automatically accepted and
 appears as an already-read introduction. Senders receive no response
 notifications, and contact requests do not send emails. Existing pending
 requests are included when the notification migrations are applied.
+
+After a contact request is accepted, either attendee can open the other
+person's profile and choose **Send Message**, or use the **Message** link on
+the contact notification. The **Messages** page contains one conversation per pair;
+the shared event is shown during the contact-request/acceptance flow rather
+than repeated in the chat.
+Chats update automatically while open (messages are checked every three
+seconds), and new messages are shown as unread on the **Messages** page until
+the recipient opens that conversation. Message traffic does not create
+separate notifications. Conversations remain available after an event ends,
+and private messages do not send email.
 
 In development, event-update emails are printed to the `runserver` console
 instead of being sent.
