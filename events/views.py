@@ -137,7 +137,8 @@ class NotificationListView(LoginRequiredMixin, ListView):
         """Order both groups before pagination and load request context."""
         return (
             self.request.user.notifications.select_related(
-                "event", "contact_request__sender"
+                "event",
+                "contact_request__sender",
             )
             .annotate(
                 _request_priority=Case(

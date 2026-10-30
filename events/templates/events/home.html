@@ -50,6 +50,17 @@
             <nav class="topbar-nav" aria-label="Account">
                 <a class="nav-link" href="{% url 'event_create' %}">Post an event</a>
 
+                {% with unread=unread_message_count %}
+                <a
+                    class="nav-link"
+                    href="{% url 'inbox' %}"
+                    data-message-count-url="{% url 'unread_message_count' %}"
+                    aria-label="Messages{% if unread %}, {{ unread }} new{% endif %}"
+                >
+                    Messages{% if unread %}&nbsp;<span class="count-pill message-count-badge">{{ unread }} new</span>{% endif %}
+                </a>
+                {% endwith %}
+
                 {% with unread=unread_notification_count %}
                 <a class="nav-link" href="{% url 'notifications' %}">
                     Notifications{% if unread %}&nbsp;<span class="count-pill">{{ unread }} new</span>{% endif %}
@@ -132,5 +143,8 @@
         </p>
         {% endif %}
     </main>
+    {% if user.is_authenticated %}
+    <script src="{% static 'events/message-count.js' %}" defer></script>
+    {% endif %}
 </body>
 </html>

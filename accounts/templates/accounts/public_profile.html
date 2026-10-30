@@ -353,6 +353,17 @@
                 </a>
                 {% endwith %}
 
+                {% with unread=unread_message_count %}
+                <a
+                    class="nav-link"
+                    href="{% url 'inbox' %}"
+                    data-message-count-url="{% url 'unread_message_count' %}"
+                    aria-label="Messages{% if unread %}, {{ unread }} new{% endif %}"
+                >
+                    Messages{% if unread %}&nbsp;<span class="count-pill message-count-badge">{{ unread }} new</span>{% endif %}
+                </a>
+                {% endwith %}
+
                 <a
                     class="nav-link active"
                     href="{% url 'public_profile' username=request.user.username %}"
@@ -386,6 +397,10 @@
             {% if request.user.is_authenticated and request.user.pk == profile_user.pk %}
             <a class="profile-button" href="{% url 'account_settings' %}">
                 Edit profile
+            </a>
+            {% elif can_message %}
+            <a class="profile-button" href="{% url 'message_user' profile_user.pk %}">
+                Send Message
             </a>
             {% endif %}
         </div>
@@ -502,5 +517,8 @@
             NYC Parks Events · Community Profiles
         </footer>
     </main>
+    {% if user.is_authenticated %}
+    <script src="{% static 'events/message-count.js' %}" defer></script>
+    {% endif %}
 </body>
 </html>

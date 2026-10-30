@@ -7,10 +7,18 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from accounts.models import ContactPermission, User
+from accounts.models import User
 
+from .contact_services import create_contact_request
 from .forms import ContactRequestForm, EventPostForm, EventReplyForm
-from .models import ContactRequest, Event, EventInterest, EventPost, Notification
+from .models import (
+    ContactRequest,
+    Conversation,
+    Event,
+    EventInterest,
+    EventPost,
+    Notification,
+)
 from .notifications import notify_contact_request
 
 
@@ -162,30 +170,13 @@ def send_contact_request(request, event_id, user_id):
     if not form.is_valid():
         return redirect(event_detail_url(event_id))
 
-    with transaction.atomic():
-        # Serialize this sender's duplicate checks across simultaneous submissions.
-        User.objects.select_for_update(no_key=True).get(pk=request.user.pk)
-        existing = ContactRequest.objects.filter(
-            event=event,
-            sender=request.user,
-            recipient=recipient,
-        ).exclude(status=ContactRequest.Status.DECLINED)
-
-        if existing.exists():
-            return redirect(event_detail_url(event_id))
-
-        contact_request = form.save(commit=False)
-        contact_request.event = event
-        contact_request.sender = request.user
-        contact_request.recipient = recipient
-
-        if recipient.contact_permission == ContactPermission.OPEN:
-            contact_request.status = ContactRequest.Status.ACCEPTED
-        else:
-            contact_request.status = ContactRequest.Status.PENDING
-
-        contact_request.save()
-        notify_contact_request(contact_request)
+    create_contact_request(
+        event,
+        request.user,
+        recipient,
+        form.cleaned_data["message"],
+        notification_sender=notify_contact_request,
+    )
 
     return redirect(event_detail_url(event_id))
 
@@ -215,6 +206,11 @@ def respond_to_contact_request(request, request_id, action):
             return redirect(destination)
 
         contact_request.save(update_fields=["status", "updated_at"])
+        if action == "accept":
+            Conversation.get_or_create_for_users(
+                contact_request.sender,
+                contact_request.recipient,
+            )
         Notification.objects.filter(
             contact_request=contact_request,
             recipient=request.user,

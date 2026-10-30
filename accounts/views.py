@@ -8,13 +8,14 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.cache import cache
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import render, resolve_url
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, UpdateView
 
-from events.models import Event
+from events.models import ContactRequest, Event
 from .forms import AccountSettingsForm, LoginForm, RegistrationForm
 
 
@@ -88,6 +89,31 @@ class PublicProfileView(LoginRequiredMixin, DetailView):
             interest_labels.get(value, value)
             for value in (profile_user.interests or [])
         ]
+
+        if profile_user.pk != self.request.user.pk:
+            pair_requests = ContactRequest.objects.filter(
+                Q(sender=self.request.user, recipient=profile_user)
+                | Q(sender=profile_user, recipient=self.request.user)
+            )
+            has_accepted_request = pair_requests.filter(
+                status=ContactRequest.Status.ACCEPTED
+            ).exists()
+            has_pending_request = pair_requests.filter(
+                status=ContactRequest.Status.PENDING
+            ).exists()
+            has_shared_upcoming_event = (
+                Event.objects.filter(
+                    status=Event.Status.UPCOMING,
+                    interests__user=self.request.user,
+                )
+                .filter(interests__user=profile_user)
+                .exists()
+            )
+            context["can_message"] = (
+                has_accepted_request or has_pending_request or has_shared_upcoming_event
+            )
+        else:
+            context["can_message"] = False
 
         # No past_events or attendance statistics are added
         # because actual attendance data has not been confirmed.
