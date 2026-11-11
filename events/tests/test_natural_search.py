@@ -525,7 +525,10 @@ class NaturalLanguageSearchPageTests(TestCase):
         )
         page = self.client.get(response["Location"])
         self.assertEqual(list(page.context["events"]), [self.queens_kids])
-        self.assertContains(page, "Kids & Family")
+        self.assertEqual(
+            page.context["understood"],
+            ["Kids & Family", "Wed, Jan 14 – Sun, Jan 18"],
+        )
 
     def test_plain_links_and_unchanged_searches_stay_exact(self, today):
         """Ordinary shared keyword URLs and filter changes stay unchanged."""
