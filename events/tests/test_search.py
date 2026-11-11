@@ -1,6 +1,7 @@
 """PostgreSQL integration tests for public event search and its cards."""
 
 from datetime import datetime
+from html.parser import HTMLParser
 from unittest.mock import patch
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -10,12 +11,40 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils.html import escape
 
-from events.models import Event
+from events.models import Event, Registration
 from events.search import search_events
 from events.services import sync_events
 from events.views import SEARCH_PAGE_SIZE
 
 NYC = ZoneInfo("America/New_York")
+
+INTERACTIVE_TAGS = {"a", "button", "form", "input", "select", "textarea"}
+
+
+class NestedInLinkFinder(HTMLParser):
+    """Collect interactive elements that the markup places inside a link."""
+
+    def __init__(self):
+        super().__init__()
+        self.open_links = 0
+        self.nested = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag in INTERACTIVE_TAGS and self.open_links:
+            self.nested.append(tag)
+        if tag == "a":
+            self.open_links += 1
+
+    def handle_endtag(self, tag):
+        if tag == "a" and self.open_links:
+            self.open_links -= 1
+
+
+def nested_in_links(response):
+    """Return the interactive tags that a page nests inside links."""
+    finder = NestedInLinkFinder()
+    finder.feed(response.content.decode())
+    return finder.nested
 
 
 def make_event(guid, **fields):
@@ -221,12 +250,14 @@ class SearchViewTests(TestCase):
         self.assertNotContains(response, query)
 
     def test_cards_link_to_local_detail_urls_and_keep_metadata(self):
-        """The entire result card has one local link and NYC-local details."""
+        """Result cards match home cards: local title link, NYC-local details."""
         response = self.client.get(reverse("search"), {"q": "yoga"})
+        detail_url = f"/events/{self.yoga.pk}/"
 
-        self.assertContains(
-            response, f'<a class="event" href="/events/{self.yoga.pk}/">'
-        )
+        self.assertContains(response, '<li class="event">')
+        self.assertNotContains(response, '<a class="event"')
+        self.assertContains(response, f'<a href="{detail_url}">Morning Yoga</a>')
+        self.assertContains(response, f'class="event-detail-link" href="{detail_url}"')
         self.assertContains(response, "Jan 15")
         self.assertContains(response, "9:00 AM")
         self.assertContains(response, "10:00 AM")
@@ -235,12 +266,37 @@ class SearchViewTests(TestCase):
         self.assertContains(response, "Stretch and breathe in the park.")
         self.assertContains(response, 'src="https://example.org/yoga.png"')
         self.assertNotContains(response, f'href="{self.yoga.event_url}"')
-        self.assertNotContains(response, f'href="{self.yoga.registration_url}"')
+        self.assertContains(response, f'href="{self.yoga.registration_url}"')
+        self.assertContains(response, "External Register")
         self.assertRedirects(
             self.client.get(f"/events/{self.yoga.pk}"),
             f"/events/{self.yoga.pk}/",
             status_code=301,
         )
+
+    def test_card_actions_are_not_nested_inside_links(self):
+        """Register links and forms sit beside the card links, never in them."""
+        community = make_event(
+            "community-yoga",
+            title="Community Yoga",
+            start_time=datetime(2099, 1, 16, 9, tzinfo=NYC),
+        )
+
+        anonymous = self.client.get(reverse("search"), {"q": "yoga"})
+        self.assertContains(anonymous, "Log in to Register")
+
+        self.client.force_login(self.user)
+        signed_in = self.client.get(reverse("search"), {"q": "yoga"})
+        self.assertContains(
+            signed_in, f'<a class="register" href="/events/{community.pk}/#register">'
+        )
+
+        Registration.objects.create(event=community, user=self.user)
+        registered = self.client.get(reverse("search"), {"q": "yoga"})
+        self.assertContains(registered, "Cancel Registration")
+
+        for response in (anonymous, signed_in, registered):
+            self.assertEqual(nested_in_links(response), [])
 
     def test_undated_cards_use_park_names_and_placeholder_images(self):
         """Optional event fields have the same fallbacks as landing cards."""

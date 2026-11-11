@@ -30,10 +30,8 @@
         <p class="result-count">{{ paginator.count }} event{{ paginator.count|pluralize }} found</p>
         <ul class="search-results">
             {% for event in events %}
-            <li>
-                <a class="event" href="{% url 'event_detail' event.pk %}">
-                    {% include 'events/_event_card_content.html' with link_to_source=False %}
-                </a>
+            <li class="event">
+                {% include 'events/_event_card_content.html' with link_to_source=True %}
             </li>
             {% endfor %}
         </ul>

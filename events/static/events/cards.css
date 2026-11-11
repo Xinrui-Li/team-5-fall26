@@ -1,6 +1,8 @@
 /* Event card: image, category tag, date badge, time, title, place and the
- * registration action. The same markup renders inside a list item on the home
- * page and inside a result link on the search page.
+ * registration action. The same markup renders as a list item on the home,
+ * search and archived events pages. Keep the card itself unlinked: the image
+ * and title link to the event page, so actions such as Register can sit
+ * alongside them without nesting links or forms inside a link.
  */
 
 .event {
