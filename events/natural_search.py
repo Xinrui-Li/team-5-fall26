@@ -199,17 +199,29 @@ class Interpretation:
 def natural_search_url(request):
     """Return the search a plain-language query stands for, or None.
 
-    Only searches typed into the search box are read this way. Its hidden
-    ``nl`` field holds the words already on the page, so changing only the
-    filters keeps those words as they are. Links with just ``q`` stay exact
-    keyword searches.
+    The search form's hidden ``nl`` field identifies a newly typed prompt.
+    Shared links without it only use the built-in rules when they contain an
+    explicit date phrase; ordinary shared keyword links stay unchanged.
+    An ``exact=1`` link always bypasses interpretation.
     """
     prompt = " ".join(request.GET.get("q", "").split())[:MAX_PROMPT_LENGTH]
     shown = " ".join(request.GET.get("nl", "").split())
-    if "nl" not in request.GET or not prompt or prompt == shown:
+    if not prompt or prompt == shown or request.GET.get("exact") == "1":
         return None
+    if "asked" in request.GET:
+        # A resolved prompt must not be interpreted again after the redirect.
+        return None
+
     today = nyc_today()
-    meaning = interpret(prompt, today)
+    if "nl" in request.GET:
+        meaning = interpret(prompt, today)
+    else:
+        # A direct link like /search?q=kids+event+this+week should work.
+        # Do not change existing links that only supply keywords, boroughs,
+        # or categories, and do not make an AI request for shared URLs.
+        meaning = parse_prompt(prompt, today)
+        if not (meaning.date_from or meaning.date_to):
+            return None
     if not meaning.changes(prompt):
         return None
     form = EventFilterForm(request.GET)
