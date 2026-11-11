@@ -90,13 +90,16 @@ read, with a link to search for the exact words instead. When no event matches
 every remaining word, events matching any of them are shown. Quoted phrases,
 `OR`, and exclusions are kept as typed.
 
-When `GEMINI_API_KEY` is set, searches of three or more words are read by
-Gemini instead, so other phrasings and languages work too (*actividades de
-naturaleza en Staten Island este fin de semana*). If Gemini is unavailable, the
-built-in rules in `events/natural_search.py` are used. Only words newly typed
-into the search box are read this way: plain `/search?q=...` links, pagination,
-and changing only the filters stay exact keyword searches. The archive search
-is always a keyword search.
+When `GEMINI_API_KEY` is set, searches of three or more words typed into
+the search box are read by Gemini, so other phrasings and languages work too
+(*actividades de naturaleza en Staten Island este fin de semana*). If Gemini
+is unavailable, the built-in rules in `events/natural_search.py` are used.
+Shared links with an explicit date expression, such as
+`/search?q=kids+event+this+week`, are also understood using the built-in
+rules. Other direct `/search?q=...` links, pagination, and changing only the
+filters stay exact keyword searches. The "Search for these exact words
+instead" link adds `exact=1` to bypass interpretation. The archive search is
+always a keyword search.
 
 ## Event filters
 
