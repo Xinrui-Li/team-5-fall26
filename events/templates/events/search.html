@@ -21,7 +21,7 @@
             <ul class="understood-terms">
                 {% for term in understood %}<li>{{ term }}</li>{% endfor %}
             </ul>
-            <a href="?q={{ asked|urlencode }}">Search for these exact words instead</a>
+            <a href="?q={{ asked|urlencode }}&amp;exact=1">Search for these exact words instead</a>
         </section>
         {% endif %}
         {% if query or has_filters %}
