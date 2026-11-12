@@ -17,6 +17,7 @@ from accounts.models import ContactPermission
 from events.community_views import respond_to_contact_request, send_contact_request
 from events.models import ContactRequest, Event, EventInterest, Notification
 from events.notifications import notify_contact_request
+from events.tests.page_helpers import without_site_header
 from events.tests.test_notifications import NotifyTestCase
 
 
@@ -123,7 +124,7 @@ class ContactNotificationTests(NotifyTestCase):
                 if status == ContactRequest.Status.ACCEPTED:
                     self.assertContains(response, f'href="{message_url}"')
                     self.assertContains(response, "Message</a>")
-                    self.assertNotContains(response, "<button")
+                    self.assertNotIn("<button", without_site_header(response))
                 else:
                     self.assertNotContains(response, f'href="{message_url}"')
                 if status == ContactRequest.Status.PENDING:
@@ -263,7 +264,7 @@ class ContactNotificationTests(NotifyTestCase):
         self.assertContains(page, "Status: Accepted")
         self.assertContains(page, "Status: Declined")
         self.assertNotContains(page, "New</span>")
-        self.assertNotContains(page, "<button")
+        self.assertNotIn("<button", without_site_header(page))
         self.assertFalse(self.host.notifications.exists())
         self.assertNotContains(self.client.get(reverse("landing")), "1 new")
         self.assertEqual(mail.outbox, [])

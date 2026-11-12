@@ -83,7 +83,9 @@
 }
 
 .chat-page {
-    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
     margin: 0;
     background: #f0f3f1;
     color: #24352c;
@@ -93,8 +95,9 @@
 .chat-shell {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
     width: min(820px, 100%);
-    height: 100dvh;
     margin: 0 auto;
     background: #ffffff;
     box-shadow: 0 0 24px rgba(30, 65, 43, 0.08);

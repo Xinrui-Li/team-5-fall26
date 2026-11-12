@@ -23,15 +23,21 @@ from events.models import (
     Registration,
 )
 
+from .page_helpers import without_site_header
+
 
 class Controls(HTMLParser):
+    """Collect the buttons and forms in a page outside the site header."""
+
     def __init__(self, response):
+        """Parse the response body."""
         super().__init__()
         self.buttons = []
         self.forms = []
-        self.feed(response.content.decode())
+        self.feed(without_site_header(response))
 
     def handle_starttag(self, tag, attrs):
+        """Record each button and form tag."""
         if tag == "button":
             self.buttons.append(dict(attrs))
         if tag == "form":

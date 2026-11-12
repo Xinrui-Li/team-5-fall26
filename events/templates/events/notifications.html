@@ -9,9 +9,8 @@
     <link rel="stylesheet" href="{% static 'events/notifications.css' %}">
 </head>
 <body>
+    {% include "events/_site_header.html" %}
     <main class="notifications-page">
-        <a class="search-back" href="{% url 'landing' %}">Back to home</a>
-        <a class="search-back" href="{% url 'inbox' %}">Messages</a>
         <h1>Notifications</h1>
         {% include "accounts/_submission_notice.html" %}
 

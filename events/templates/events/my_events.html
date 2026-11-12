@@ -133,11 +133,8 @@
 </head>
 
 <body>
+    {% include "events/_site_header.html" %}
     <main class="my-events-page">
-
-        <a class="search-back" href="{% url 'landing' %}">
-            Back to home
-        </a>
 
         <h1>My Events</h1>
         {% include "accounts/_submission_notice.html" %}

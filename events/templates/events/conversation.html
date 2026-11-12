@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversation with {{ other_user.get_display_name }} | NYC Parks Events</title>
+    <link rel="stylesheet" href="{% static 'events/search.css' %}">
     <link rel="stylesheet" href="{% static 'events/messages.css' %}">
     <link rel="stylesheet" href="{% static 'reports/menus.css' %}">
     <script src="{% static 'reports/menus.js' %}" defer></script>
 </head>
 <body class="chat-page">
+    {% include "events/_site_header.html" %}
     <main class="chat-shell">
         <header class="chat-header">
             <a class="chat-back" href="{% url 'inbox' %}" aria-label="Back to messages">&larr;</a>

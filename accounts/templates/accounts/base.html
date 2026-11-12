@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{% static 'events/search.css' %}">
   <title>{% block title %}Team 5{% endblock %}</title>
   <style>
     body { margin: 0; font-family: system-ui, sans-serif; line-height: 1.5; color: #1f2328; background: #f6f8fa; }
@@ -26,6 +27,7 @@
   {% block extrastyle %}{% endblock %}
 </head>
 <body>
+    {% include "events/_site_header.html" %}
   <main>
     {% if messages %}
       <ul class="messages" role="status">

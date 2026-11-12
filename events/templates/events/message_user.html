@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{% static 'events/messages.css' %}">
 </head>
 <body>
+    {% include "events/_site_header.html" %}
     <main class="messages-page">
         <a class="search-back" href="{% url 'public_profile' username=recipient.username %}">Back to profile</a>
         <h1>Message {{ recipient.get_display_name }}</h1>

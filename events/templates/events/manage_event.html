@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="{% static 'events/manage_event.css' %}">
 </head>
 <body>
+    {% include "events/_site_header.html" %}
     <main class="manage-event-page">
         <a class="search-back" href="{% url 'event_detail' event.pk %}">Back to event</a>
         <h1>Manage event</h1>

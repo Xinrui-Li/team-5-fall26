@@ -23,57 +23,7 @@
 </head>
 
 <body class="home-page">
-    <header class="topbar">
-        <div class="topbar-inner">
-            <a
-                class="brand active"
-                href="{% url 'landing' %}"
-                aria-current="page"
-            >NYC Parks <span>Events</span></a>
-
-            {% if user.is_authenticated %}
-            <nav class="topbar-nav" aria-label="Account">
-                {% if not viewer_banned %}<a class="nav-link" href="{% url 'event_create' %}">Post an event</a>{% endif %}
-                <a class="nav-link" href="{% url 'my_events' %}">My events</a>
-
-                {% with unread=unread_message_count %}
-                <a
-                    class="nav-link"
-                    href="{% url 'inbox' %}"
-                    data-message-count-url="{% url 'unread_message_count' %}"
-                    aria-label="Messages{% if unread %}, {{ unread }} new{% endif %}"
-                >
-                    Messages{% if unread %}&nbsp;<span class="count-pill message-count-badge">{{ unread }} new</span>{% endif %}
-                </a>
-                {% endwith %}
-
-                {% with unread=unread_notification_count %}
-                <a class="nav-link" href="{% url 'notifications' %}">
-                    Notifications{% if unread %}&nbsp;<span class="count-pill">{{ unread }} new</span>{% endif %}
-                </a>
-                {% endwith %}
-
-                <a
-                    class="nav-link"
-                    href="{% url 'public_profile' username=request.user.username %}"
-                >Public Profile</a>
-
-                <span class="nav-user">
-                    {{ user.display_name|default:user.username }}
-                </span>
-
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-ghost">Log out</button>
-                </form>
-            </nav>
-            {% else %}
-            <nav class="topbar-nav" aria-label="Account">
-                <a class="nav-link" href="{% url 'login' %}">Log in</a>
-            </nav>
-            {% endif %}
-        </div>
-    </header>
+    {% include "events/_site_header.html" %}
 
     <main class="shell">
         <h1 class="headline">
@@ -158,7 +108,6 @@
         {% endif %}
     </main>
     {% if user.is_authenticated %}
-    <script src="{% static 'events/message-count.js' %}" defer></script>
     {% endif %}
     {% include "chatbot/widget.html" %}
 </body>

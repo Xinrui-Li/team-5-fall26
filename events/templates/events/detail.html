@@ -14,7 +14,7 @@
 
 
 <style>
-    body {
+    .detail-page {
         max-width: 850px;
         margin: 0 auto;
         padding: 2rem 1rem 4rem;
@@ -548,11 +548,9 @@
 </head>
 
 <body>
-    <p>
-        <a href="{% url 'landing' %}">Back to home</a>
-        ·
-        <a href="{% url 'search' %}">Search events</a>
-    </p>
+    {% include "events/_site_header.html" %}
+<div class="detail-page">
+    <p class="detail-back"><a href="{% url 'search' %}">Search events</a></p>
 
     <main class="detail-card">
         {% for message in messages %}
@@ -1153,6 +1151,7 @@
             {% endfor %}
         </div>
     </section>
+</div>
 
     {% include "chatbot/widget.html" %}
 
