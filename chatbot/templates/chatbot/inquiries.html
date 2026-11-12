@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="{% static 'chatbot/inquiries.css' %}">
 </head>
 <body>
+    {% include "events/_site_header.html" %}
     <main class="inquiries-page">
-        <a class="search-back" href="{% url 'landing' %}">Back to home</a>
         <a class="search-back" href="{% url 'my_events' %}">My events</a>
         <h1>Questions</h1>
         <p class="inquiries-intro">

@@ -1,0 +1,196 @@
+/* The shared site header, included on every page by _site_header.html.
+ *
+ * Some pages do not load search.css, so every token has a fallback that
+ * matches the value declared there.
+ */
+
+.site-header {
+    font-family: var(--font, "Figtree", system-ui, sans-serif);
+    line-height: 1.5;
+    background: var(--surface, #ffffff);
+    border-bottom: 1px solid var(--line, #c9d3cb);
+    color: var(--ink, #16241b);
+}
+
+.site-header *,
+.site-header *::before,
+.site-header *::after {
+    box-sizing: border-box;
+}
+
+.site-header .topbar-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 20px;
+    max-width: var(--page-width, 1200px);
+    margin: 0 auto;
+    padding: 12px 24px;
+}
+
+.site-header .brand {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--ink, #16241b);
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+}
+
+.site-header .brand span {
+    color: var(--leaf, #1f6b45);
+    font-weight: 700;
+}
+
+.site-header .topbar-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+}
+
+.site-header .nav-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: var(--touch, 44px);
+    color: var(--ink, #16241b);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.site-header .nav-link:hover {
+    color: var(--leaf, #1f6b45);
+    text-decoration: underline;
+}
+
+.site-header .nav-link.active {
+    color: var(--leaf, #1f6b45);
+    font-weight: 800;
+}
+
+.site-header .nav-link.active::after {
+    position: absolute;
+    right: 0;
+    bottom: -6px;
+    left: 0;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--leaf, #1f6b45);
+    content: "";
+}
+
+.site-header .count-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: var(--leaf, #1f6b45);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.site-header .btn-ghost,
+.site-header .account-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch, 44px);
+    padding: 0 18px;
+    border: 1px solid var(--line, #c9d3cb);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink, #16241b);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.site-header .btn-ghost:hover,
+.site-header .account-menu-toggle:hover {
+    border-color: var(--leaf, #1f6b45);
+    color: var(--leaf, #1f6b45);
+}
+
+.site-header .account-menu {
+    position: relative;
+}
+
+.site-header .account-menu-toggle {
+    gap: 8px;
+    max-width: 16rem;
+    list-style: none;
+}
+
+.site-header .account-menu-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.site-header .account-menu-toggle::after {
+    width: 0;
+    height: 0;
+    border-top: 5px solid currentColor;
+    border-right: 5px solid transparent;
+    border-left: 5px solid transparent;
+    content: "";
+}
+
+.site-header .account-menu-panel {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 6px);
+    right: 0;
+    display: grid;
+    min-width: 12rem;
+    padding: 6px;
+    border: 1px solid var(--line, #c9d3cb);
+    border-radius: 12px;
+    background: var(--surface, #ffffff);
+    box-shadow: 0 12px 28px rgba(22, 36, 27, 0.14);
+}
+
+.site-header .account-menu-panel a,
+.site-header .account-menu-panel button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: var(--touch, 44px);
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--ink, #16241b);
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.site-header .account-menu-panel a:hover,
+.site-header .account-menu-panel button:hover {
+    background: var(--chip, #e7ede6);
+    color: var(--leaf-dark, #154d34);
+}
+
+.site-header .account-menu-panel form {
+    margin: 0;
+}
+
+.site-header :where(a, button, summary):focus-visible {
+    outline: 3px solid var(--focus, #f2b632);
+    outline-offset: 2px;
+}
+
+@media (max-width: 620px) {
+    .site-header .topbar-inner {
+        padding-right: 16px;
+        padding-left: 16px;
+    }
+}

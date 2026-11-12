@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{% static 'events/event_form.css' %}">
 </head>
 <body>
+    {% include "events/_site_header.html" %}
     <main class="event-form-page">
         <a class="search-back" href="{% url 'event_detail' event.pk %}">Back to event</a>
         <h1>Cancel this event?</h1>

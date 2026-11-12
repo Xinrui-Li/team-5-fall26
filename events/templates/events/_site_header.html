@@ -1,0 +1,41 @@
+{% load static %}{% with page=request.resolver_match.url_name %}
+<link rel="stylesheet" href="{% static 'events/header.css' %}">
+<header class="topbar site-header">
+    <div class="topbar-inner">
+        <a class="brand{% if page == 'landing' %} active{% endif %}" href="{% url 'landing' %}"{% if page == 'landing' %} aria-current="page"{% endif %}>NYC Parks <span>Events</span></a>
+
+        {% if user.is_authenticated %}
+        <nav class="topbar-nav" aria-label="Main">
+            {% if not viewer_banned %}<a class="nav-link{% if page == 'event_create' %} active{% endif %}" href="{% url 'event_create' %}"{% if page == 'event_create' %} aria-current="page"{% endif %}>Post an event</a>{% endif %}
+            <a class="nav-link{% if page == 'my_events' %} active{% endif %}" href="{% url 'my_events' %}"{% if page == 'my_events' %} aria-current="page"{% endif %}>My events</a>
+
+            {% with unread=unread_message_count %}
+            <a class="nav-link{% if page == 'inbox' or page == 'conversation' or page == 'message_user' %} active{% endif %}" href="{% url 'inbox' %}" data-message-count-url="{% url 'unread_message_count' %}" aria-label="Messages{% if unread %}, {{ unread }} new{% endif %}"{% if page == 'inbox' %} aria-current="page"{% endif %}>Messages{% if unread %} <span class="count-pill message-count-badge">{{ unread }} new</span>{% endif %}</a>
+            {% endwith %}
+
+            {% with unread=unread_notification_count %}
+            <a class="nav-link{% if page == 'notifications' %} active{% endif %}" href="{% url 'notifications' %}" aria-label="Notifications{% if unread %}, {{ unread }} new{% endif %}"{% if page == 'notifications' %} aria-current="page"{% endif %}>Notifications{% if unread %} <span class="count-pill notification-count-badge">{{ unread }} new</span>{% endif %}</a>
+            {% endwith %}
+
+            <details class="account-menu">
+                <summary class="account-menu-toggle">{{ user.display_name|default:user.username }}</summary>
+                <div class="account-menu-panel">
+                    <a href="{% url 'public_profile' username=user.username %}">Public profile</a>
+                    <a href="{% url 'account_settings' %}">Account settings</a>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit">Log out</button>
+                    </form>
+                </div>
+            </details>
+        </nav>
+        {% else %}
+        <nav class="topbar-nav" aria-label="Account">
+            {% if page != 'login' %}<a class="nav-link" href="{% url 'login' %}">Log in</a>{% endif %}
+            {% if page != 'register' %}<a class="btn-ghost" href="{% url 'register' %}">Sign up</a>{% endif %}
+        </nav>
+        {% endif %}
+    </div>
+</header>
+{% if user.is_authenticated %}<script src="{% static 'events/message-count.js' %}" defer></script>{% endif %}
+{% endwith %}

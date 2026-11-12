@@ -9,13 +9,13 @@
     <link rel="stylesheet" href="{% static 'events/event_form.css' %}">
 </head>
 <body>
+    {% include "events/_site_header.html" %}
     <main class="event-form-page">
         {% if object %}
         <a class="search-back" href="{% url 'event_detail' object.pk %}">Back to event</a>
         <h1>Edit event</h1>
         <p class="event-form-intro">Update your event's details. Changes show up right away. Times are in New York time.</p>
         {% else %}
-        <a class="search-back" href="{% url 'landing' %}">Back to home</a>
         <h1>Post an event</h1>
         <p class="event-form-intro">Share your event so people can discover it alongside NYC Parks events. Times are in New York time.</p>
         {% endif %}

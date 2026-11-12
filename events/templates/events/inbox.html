@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="{% static 'events/messages.css' %}">
 </head>
 <body>
+    {% include "events/_site_header.html" %}
     <main class="messages-page">
-        <a class="search-back" href="{% url 'landing' %}">Back to home</a>
         <h1>Messages</h1>
 
         {% if conversations %}
