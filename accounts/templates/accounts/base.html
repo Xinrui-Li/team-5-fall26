@@ -26,7 +26,7 @@
   </style>
   {% block extrastyle %}{% endblock %}
 </head>
-<body>
+<body{% block body_class %}{% endblock %}>
     {% include "events/_site_header.html" %}
   <main>
     {% if messages %}

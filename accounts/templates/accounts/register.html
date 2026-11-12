@@ -1,22 +1,21 @@
 {% extends "accounts/base.html" %}
-{% load socialaccount %}
+{% load static %}
 
-{% block title %}Create an account{% endblock %}
+{% block title %}Sign up | NYC Parks Events{% endblock %}
+{% block body_class %} class="auth-page"{% endblock %}
+{% block extrastyle %}<link rel="stylesheet" href="{% static 'accounts/auth.css' %}">{% endblock %}
 
 {% block content %}
   <h1>Create an account</h1>
+  <p class="auth-intro">Join to save events, register and meet people in your parks.</p>
   {% if google_oauth_enabled %}
-  <form method="post" action="{% provider_login_url 'google' %}">
-    {% csrf_token %}
-    <button type="submit" class="button">Sign up with Google</button>
-  </form>
-  <p>Or create an account with a password:</p>
+  {% include "accounts/_google_button.html" with label="Sign up with Google" %}
+  <p class="auth-divider">or sign up with a password</p>
   {% endif %}
-  <form method="post">
+  <form method="post" class="auth-form">
     {% csrf_token %}
     {{ form }}
     <button type="submit" class="button primary">Create account</button>
   </form>
-  <p>Already have an account?</p>
-  <a class="button" href="{{ login_url }}">Log in</a>
+  <p class="auth-links"><span>Already have an account? <a href="{{ login_url }}">Log in</a></span></p>
 {% endblock %}

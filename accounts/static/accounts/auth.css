@@ -1,0 +1,250 @@
+/* Log-in and sign-up pages, in the site's green Figtree design.
+ *
+ * Loaded after search.css, so it uses the design tokens declared there.
+ */
+
+body.auth-page {
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--canvas);
+}
+
+.auth-page main {
+    width: min(100% - 32px, 28rem);
+    max-width: none;
+    margin: 40px auto 64px;
+    padding: 32px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: 0 18px 40px rgba(22, 36, 27, 0.08);
+}
+
+.auth-page h1 {
+    margin: 0 0 6px;
+    font-size: clamp(1.6rem, 5vw, 2rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+}
+
+.auth-intro {
+    margin: 0 0 24px;
+    color: var(--muted);
+}
+
+.auth-form {
+    display: grid;
+    gap: 18px;
+}
+
+.auth-form div {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+}
+
+.auth-page label {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.auth-page input:not([type="checkbox"], [type="hidden"]) {
+    width: 100%;
+    min-height: var(--touch);
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+}
+
+.auth-page input:not([type="checkbox"]):hover {
+    border-color: var(--muted);
+}
+
+.auth-page input:not([type="checkbox"]):focus-visible {
+    border-color: var(--leaf);
+}
+
+.auth-page .helptext,
+.auth-page .helptext ul {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.875rem;
+}
+
+.auth-page .helptext ul {
+    padding-left: 1.1rem;
+}
+
+.auth-page .errorlist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--error);
+    font-weight: 600;
+}
+
+.auth-alert {
+    margin: 0 0 18px;
+    color: var(--error);
+    font-weight: 600;
+}
+
+.auth-alert:not(:has(> div:not(:empty))) {
+    display: none;
+}
+
+.auth-alert > div {
+    padding: 12px 14px;
+    border: 1px solid #f1c3bd;
+    border-radius: 10px;
+    background: #fdf0ee;
+}
+
+.auth-page .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: var(--touch);
+    padding: 0 22px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.auth-page .button:hover {
+    border-color: var(--leaf);
+    color: var(--leaf);
+}
+
+.auth-page .button.primary {
+    border-color: var(--leaf);
+    background: var(--leaf);
+    color: #ffffff;
+}
+
+.auth-page .button.primary:hover {
+    border-color: var(--leaf-dark);
+    background: var(--leaf-dark);
+    color: #ffffff;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 22px 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+    content: "";
+}
+
+.auth-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 16px;
+    margin: 24px 0 0;
+    color: var(--muted);
+}
+
+.auth-links a {
+    font-weight: 700;
+}
+
+/* Google's sign-in button, following its branding guidelines: white fill,
+ * #747775 outline, #1f1f1f label, the standard four-colour "G" at 20px,
+ * 12px side padding and a 10px gap before the label. */
+.gsi-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: var(--touch);
+    padding: 0 12px;
+    border: 1px solid #747775;
+    border-radius: var(--radius-pill);
+    background: #ffffff;
+    color: #1f1f1f;
+    font-family: Roboto, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.25px;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.gsi-button:hover {
+    background: #f8faff;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3),
+        0 1px 3px 1px rgba(60, 64, 67, 0.15);
+}
+
+.gsi-button:active {
+    background: #eef3fd;
+}
+
+.gsi-button svg {
+    flex: none;
+    width: 20px;
+    height: 20px;
+}
+
+.auth-page form {
+    margin: 0;
+}
+
+/* Spinner and lock-out styles for the log-in form. */
+#submitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.auth-form .loading {
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--muted);
+}
+
+#loginForm.loading-state .loading {
+    display: flex;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--line);
+    border-top-color: var(--leaf);
+    border-radius: 50%;
+    animation: auth-spin 0.8s linear infinite;
+}
+
+@keyframes auth-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 480px) {
+    .auth-page main {
+        margin-top: 20px;
+        padding: 24px 18px;
+    }
+}
