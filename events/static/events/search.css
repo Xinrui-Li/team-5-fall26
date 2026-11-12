@@ -244,16 +244,6 @@ img {
     list-style: none;
 }
 
-.search-results > li {
-    display: flex;
-}
-
-.search-results .event {
-    flex: 1 1 auto;
-    color: var(--ink);
-    text-decoration: none;
-}
-
 .search-empty {
     padding: 24px;
     background: var(--surface);
