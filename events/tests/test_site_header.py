@@ -136,3 +136,41 @@ class SiteHeaderTests(TestCase):
         self.assertNotIn(f'class="nav-link" href="{reverse("login")}"', login)
         register = self.client.get(reverse("register")).content.decode()
         self.assertNotIn(f'class="btn-ghost" href="{reverse("register")}"', register)
+
+
+class MobileNavigationTests(SiteHeaderTests):
+    """Phones get a bottom tab bar that replaces the header links."""
+
+    def test_every_page_has_the_tab_bar(self):
+        """Each signed-in page renders the tab bar once."""
+        for url in self.page_urls():
+            with self.subTest(url=url):
+                html = self.client.get(url).content.decode()
+                self.assertEqual(html.count('<nav class="tabbar"'), 1)
+                for label in ("Home", "Post", "My events", "Messages", "Alerts"):
+                    self.assertIn(f"<span>{label}</span>", html)
+
+    def test_tab_bar_shows_unread_counts(self):
+        """Message and notification tabs carry unread badges."""
+        response = self.client.get(reverse("my_events"))
+        self.assertContains(response, '<span class="tab-badge">1</span>', count=2)
+
+    def test_tab_bar_marks_current_page(self):
+        """The tab for the page being viewed is marked as current."""
+        response = self.client.get(reverse("inbox"))
+        self.assertContains(response, f'class="tab active" href="{reverse("inbox")}"')
+
+    def test_signed_out_pages_have_no_tab_bar(self):
+        """Visitors keep the compact header without a tab bar."""
+        self.client.logout()
+        response = self.client.get(reverse("landing"))
+        self.assertNotContains(response, 'class="tabbar"')
+
+    def test_header_stylesheet_hides_links_on_phones(self):
+        """The stylesheet swaps header links for the tab bar under 720px."""
+        from django.contrib.staticfiles import finders
+
+        with open(finders.find("events/header.css"), encoding="utf-8") as css:
+            text = css.read()
+        self.assertIn("@media (max-width: 720px)", text)
+        self.assertIn(".tabbar {\n        position: fixed;", text)
