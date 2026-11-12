@@ -448,7 +448,10 @@ class NaturalLanguageSearchPageTests(TestCase):
         )
         for term in ("“yoga”", "Brooklyn", "Sat, Jan 17 – Sun, Jan 18"):
             self.assertContains(response, f"<li>{term}</li>")
-        self.assertContains(response, 'href="?q=yoga%20in%20Brooklyn%20this%20weekend"')
+        self.assertContains(
+            response,
+            'href="?q=yoga%20in%20Brooklyn%20this%20weekend&amp;exact=1"',
+        )
         # The filter bar shows the filters, so they can be changed.
         self.assertContains(response, 'value="brooklyn" id="filter-borough_1" checked')
         self.assertContains(response, 'name="date_from" value="2099-01-17"')
@@ -505,16 +508,47 @@ class NaturalLanguageSearchPageTests(TestCase):
         self.assertEqual(list(response.context["events"]), [self.brooklyn_yoga])
         self.assertNotContains(response, "Searching for")
 
-    def test_links_and_unchanged_words_stay_exact_keyword_searches(self, today):
-        """Only new words typed into the search box are read as a prompt."""
+    def test_shared_link_with_date_phrase_interprets_search(self, today):
+        """A pasted /search?q= URL with a time phrase uses date filters."""
+        response = self.client.get(
+            reverse("search"),
+            {"q": "kids event this week", "date_from": "", "date_to": ""},
+        )
+        self.assertEqual(
+            self.redirect_params(response),
+            [
+                ("date_from", "2099-01-14"),
+                ("date_to", "2099-01-18"),
+                ("category", "kids"),
+                ("asked", "kids event this week"),
+            ],
+        )
+        page = self.client.get(response["Location"])
+        self.assertEqual(list(page.context["events"]), [self.queens_kids])
+        self.assertEqual(
+            page.context["understood"],
+            ["Kids & Family", "Wed, Jan 14 – Sun, Jan 18"],
+        )
+
+    def test_plain_links_and_unchanged_searches_stay_exact(self, today):
+        """Ordinary shared keyword URLs and filter changes stay unchanged."""
         prompt = "yoga in Brooklyn this weekend"
-        link = self.client.get(reverse("search"), {"q": prompt})
+        link = self.client.get(reverse("search"), {"q": "yoga in Brooklyn"})
         refiltered = self.ask(prompt, nl=prompt, borough="queens")
 
         for response in (link, refiltered):
             self.assertEqual(response.status_code, 200)
             self.assertNotContains(response, "Searching for")
         self.assertEqual(list(link.context["events"]), [])
+
+    def test_exact_search_link_skips_natural_language_redirect(self, today):
+        """Visitors can request raw keyword matching for a dated phrase."""
+        response = self.client.get(
+            reverse("search"), {"q": "kids event this week", "exact": "1"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(response.context["events"]), [])
+        self.assertNotContains(response, "Searching for")
 
     def test_summary_needs_something_to_describe(self, today):
         response = self.client.get(reverse("search"), {"asked": "anything"})
