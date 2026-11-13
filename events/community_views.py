@@ -1,5 +1,6 @@
 """Views for event interests, discussions, and contact requests."""
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
@@ -27,6 +28,12 @@ from .notifications import notify_contact_request
 def event_detail_url(event_id):
     """Return the URL for an event detail page."""
     return reverse("event_detail", args=[event_id])
+
+
+CLOSED_EVENT = (
+    "This event has ended or was cancelled, so it no longer takes new activity. "
+    "Browse upcoming events instead."
+)
 
 
 def get_open_event(event_id):
@@ -57,6 +64,7 @@ def toggle_event_interest(request, event_id):
 
     event = get_open_event(event_id)
     if event is None:
+        messages.error(request, CLOSED_EVENT)
         return redirect(event_detail_url(event_id))
 
     valid_statuses = {
@@ -64,6 +72,9 @@ def toggle_event_interest(request, event_id):
     }
 
     if status not in valid_statuses:
+        messages.error(
+            request, "That choice isn't available. Reload the page and try again."
+        )
         return redirect(event_detail_url(event_id))
 
     with transaction.atomic():
@@ -78,11 +89,14 @@ def toggle_event_interest(request, event_id):
                 user=request.user,
                 status=status,
             )
+            messages.success(request, "Marked as interested.")
         elif interest.status == status:
             interest.delete()
+            messages.success(request, "Removed from your interested events.")
         else:
             interest.status = status
             interest.save(update_fields=["status"])
+            messages.success(request, "Marked as interested.")
 
     return redirect(event_detail_url(event_id))
 
@@ -94,6 +108,7 @@ def create_event_post(request, event_id):
     event = get_object_or_404(Event, pk=event_id)
 
     if event.status != Event.Status.UPCOMING:
+        messages.error(request, CLOSED_EVENT)
         return redirect(event_detail_url(event_id))
 
     form = EventPostForm(request.POST)
@@ -103,6 +118,9 @@ def create_event_post(request, event_id):
         post.event = event
         post.author = request.user
         post.save()
+        messages.success(request, "Comment posted.")
+    else:
+        messages.error(request, "Write a comment before posting.")
 
     return redirect(event_detail_url(event_id))
 
@@ -117,6 +135,7 @@ def create_event_reply(request, post_id):
     )
 
     if post.event.status != Event.Status.UPCOMING:
+        messages.error(request, CLOSED_EVENT)
         return redirect(event_detail_url(post.event_id))
 
     form = EventReplyForm(request.POST)
@@ -142,6 +161,9 @@ def create_event_reply(request, post_id):
                         f"your comment on '{post.event.title}'."
                     ),
                 )
+        messages.success(request, "Reply posted.")
+    else:
+        messages.error(request, "Write a reply before posting.")
 
     return redirect(event_detail_url(post.event_id))
 
@@ -153,6 +175,7 @@ def send_contact_request(request, event_id, user_id):
     event = get_open_event(event_id)
 
     if event is None:
+        messages.error(request, CLOSED_EVENT)
         return redirect(event_detail_url(event_id))
 
     recipient = get_object_or_404(
@@ -163,26 +186,47 @@ def send_contact_request(request, event_id, user_id):
     )
 
     if recipient.pk == request.user.pk:
+        messages.error(request, "You can't send a contact request to yourself.")
         return redirect(event_detail_url(event_id))
 
     if not EventInterest.objects.filter(
         event=event,
         user=request.user,
     ).exists():
+        messages.error(
+            request,
+            "Mark yourself as interested in this event first, "
+            "then send the request.",
+        )
         return redirect(event_detail_url(event_id))
 
     form = ContactRequestForm(request.POST)
 
     if not form.is_valid():
+        messages.error(
+            request, "Your message is too long. Shorten it and send the request again."
+        )
         return redirect(event_detail_url(event_id))
 
-    create_contact_request(
+    contact_request, created = create_contact_request(
         event,
         request.user,
         recipient,
         form.cleaned_data["message"],
         notification_sender=notify_contact_request,
     )
+    if contact_request is None:
+        messages.error(
+            request,
+            "This contact request can't be sent. Make sure you are both "
+            "interested in this upcoming event, then try again.",
+        )
+    elif contact_request.status == ContactRequest.Status.ACCEPTED:
+        messages.success(request, "You're connected. You can message them now.")
+    elif created:
+        messages.success(request, "Contact request sent.")
+    else:
+        messages.info(request, "Your contact request is already waiting for a reply.")
 
     return redirect(event_detail_url(event_id))
 
@@ -209,6 +253,7 @@ def respond_to_contact_request(request, request_id, action):
         elif action == "decline":
             contact_request.status = ContactRequest.Status.DECLINED
         else:
+            messages.error(request, "That action isn't available. Try again.")
             return redirect(destination)
 
         contact_request.save(update_fields=["status", "updated_at"])
@@ -223,4 +268,8 @@ def respond_to_contact_request(request, request_id, action):
             read_at__isnull=True,
         ).update(read_at=timezone.now())
 
+    if action == "accept":
+        messages.success(request, "Contact request accepted. You can message them now.")
+    else:
+        messages.success(request, "Contact request declined.")
     return redirect(destination)

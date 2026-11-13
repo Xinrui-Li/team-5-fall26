@@ -6,6 +6,7 @@ from threading import Barrier
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core import mail
 from django.db import close_old_connections, connections
 from django.http import Http404
@@ -412,6 +413,8 @@ class ConcurrentContactNotificationTests(TransactionTestCase):
             try:
                 request = RequestFactory().post("/")
                 request.user = get_user_model().objects.get(pk=user_id)
+                request.session = {}
+                request._messages = FallbackStorage(request)
                 barrier.wait(timeout=10)
                 try:
                     return view(request, *args).status_code

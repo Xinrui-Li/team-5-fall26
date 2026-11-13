@@ -25,12 +25,6 @@
         </header>
         <p class="chat-moderation-notice"><small>Conversations may be reviewed by administrators for moderation purposes.</small></p>
 
-        {% if messages %}
-        <ul class="message-alerts" role="status">
-            {% for alert in messages %}<li>{{ alert }}</li>{% endfor %}
-        </ul>
-        {% endif %}
-
         <section
             class="chat-history"
             aria-label="Messages"
