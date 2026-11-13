@@ -78,6 +78,35 @@ class BannedRecipientContactTests(TestCase):
         self.assertFalse(ContactRequest.objects.exists())
         self.assertFalse(Notification.objects.exists())
 
+    def test_banned_public_profile_hides_new_contact_action(self):
+        """A banned recipient should not get a new-contact profile link."""
+        url = reverse("public_profile", args=[self.recipient.username])
+        page = self.client.get(url)
+        self.assertNotContains(
+            page, reverse("message_user", args=[self.recipient.pk])
+        )
+        self.assertNotContains(page, "Send Message")
+
+    def test_approved_chat_remains_available_during_recipient_ban(self):
+        """An accepted contact can still open the existing conversation."""
+        from events.models import Conversation
+
+        ContactRequest.objects.create(
+            event=self.event,
+            sender=self.sender,
+            recipient=self.recipient,
+            status=ContactRequest.Status.ACCEPTED,
+        )
+        page = self.client.get(
+            reverse("public_profile", args=[self.recipient.username])
+        )
+        self.assertContains(
+            page, reverse("message_user", args=[self.recipient.pk])
+        )
+        response = self.client.get(reverse("message_user", args=[self.recipient.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Conversation.objects.exists())
+
     def test_lifted_ban_restores_both_contact_forms(self):
         """An old ban must not keep the recipient unavailable forever."""
         self.ban.lifted_at = timezone.now()
@@ -86,6 +115,12 @@ class BannedRecipientContactTests(TestCase):
         self.assertContains(
             response,
             reverse("send_contact_request", args=[self.event.pk, self.recipient.pk]),
+        )
+        profile = self.client.get(
+            reverse("public_profile", args=[self.recipient.username])
+        )
+        self.assertContains(
+            profile, reverse("message_user", args=[self.recipient.pk])
         )
         page = self.client.get(reverse("message_user", args=[self.recipient.pk]))
         self.assertContains(page, "Send Contact Request")
