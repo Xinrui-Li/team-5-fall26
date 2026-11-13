@@ -121,12 +121,9 @@
         }
     }
 
-    /* Events without a photo get a short strip, not a full banner. */
-    .detail-image.is-placeholder {
-        max-height: 120px;
-        object-fit: contain;
-        padding: 1rem 0;
-        background: #e7ede6;
+    /* A category illustration stands in for a missing photo with a shorter banner. */
+    .detail-image.is-illustration {
+        max-height: 240px;
     }
 
     .detail-meta {
@@ -649,11 +646,11 @@
         {% endif %}
 
         <img
-            class="detail-image{% if not event.image_url %} is-placeholder{% endif %}"
-            src="{% if event.image_url %}{{ event.image_url }}{% else %}{% static 'events/no-image.svg' %}{% endif %}"
-            data-placeholder="{% static 'events/no-image.svg' %}"
-            alt="{% if event.image_url %}Image for {{ event.title }}{% else %}No image available{% endif %}"
-            onerror="this.onerror=null;this.src=this.dataset.placeholder;this.classList.add('is-placeholder')"
+            class="detail-image{% if not event.image_url %} is-illustration{% endif %}"
+            src="{% if event.image_url %}{{ event.image_url }}{% else %}{% static event.category_image %}{% endif %}"
+            data-placeholder="{% static event.category_image %}"
+            alt="{% if event.image_url %}Image for {{ event.title }}{% endif %}"
+            onerror="this.onerror=null;this.src=this.dataset.placeholder;this.alt='';this.classList.add('is-illustration')"
         >
 
         <h1>{{ event.title }}</h1>
