@@ -7,7 +7,13 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User, UserBan
-from events.models import ContactRequest, Event, EventInterest, Notification
+from events.models import (
+    ContactRequest,
+    Conversation,
+    Event,
+    EventInterest,
+    Notification,
+)
 
 
 class BannedRecipientContactTests(TestCase):
@@ -82,27 +88,19 @@ class BannedRecipientContactTests(TestCase):
         """A banned recipient should not get a new-contact profile link."""
         url = reverse("public_profile", args=[self.recipient.username])
         page = self.client.get(url)
-        self.assertNotContains(
-            page, reverse("message_user", args=[self.recipient.pk])
-        )
+        self.assertNotContains(page, reverse("message_user", args=[self.recipient.pk]))
         self.assertNotContains(page, "Send Message")
 
     def test_approved_chat_remains_available_during_recipient_ban(self):
         """An accepted contact can still open the existing conversation."""
-        from events.models import Conversation
-
-        ContactRequest.objects.create(
+                ContactRequest.objects.create(
             event=self.event,
             sender=self.sender,
             recipient=self.recipient,
             status=ContactRequest.Status.ACCEPTED,
         )
-        page = self.client.get(
-            reverse("public_profile", args=[self.recipient.username])
-        )
-        self.assertContains(
-            page, reverse("message_user", args=[self.recipient.pk])
-        )
+        page = self.client.get(reverse("public_profile", args=[self.recipient.username]))
+        self.assertContains(page, reverse("message_user", args=[self.recipient.pk]))
         response = self.client.get(reverse("message_user", args=[self.recipient.pk]))
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Conversation.objects.exists())
@@ -119,9 +117,7 @@ class BannedRecipientContactTests(TestCase):
         profile = self.client.get(
             reverse("public_profile", args=[self.recipient.username])
         )
-        self.assertContains(
-            profile, reverse("message_user", args=[self.recipient.pk])
-        )
+        self.assertContains(profile, reverse("message_user", args=[self.recipient.pk]))
         page = self.client.get(reverse("message_user", args=[self.recipient.pk]))
         self.assertContains(page, "Send Contact Request")
         self.assertNotContains(
