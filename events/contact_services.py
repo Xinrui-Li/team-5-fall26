@@ -5,7 +5,7 @@ from django.db import transaction
 from accounts.ban_services import require_unbanned_user
 from accounts.models import ContactPermission, User
 
-from .models import ContactRequest, Conversation, Event, EventInterest
+from .models import ContactRequest, Conversation, EventInterest
 from .notifications import notify_contact_request
 
 
@@ -21,7 +21,8 @@ def create_contact_request(
         User.objects.select_for_update(no_key=True).get(pk=sender.pk)
         require_unbanned_user(sender)
         if (
-            event.status != Event.Status.UPCOMING
+            not event.is_open
+            or event.is_cancelled
             or sender.pk == recipient.pk
             or not recipient.share_profile_with_attendees
             or not EventInterest.objects.filter(event=event, user=sender).exists()
