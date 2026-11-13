@@ -15,7 +15,7 @@
 
 <style>
     .detail-page {
-        max-width: 850px;
+        max-width: 1120px;
         margin: 0 auto;
         padding: 2rem 1rem 4rem;
     }
@@ -39,6 +39,94 @@
         object-fit: cover;
         border-radius: 10px;
         margin-bottom: 1.5rem;
+    }
+
+    /* Two columns on wide screens: details left, sticky actions right. */
+    .detail-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .detail-panel {
+        margin-top: 1.25rem;
+        padding: 1.25rem;
+        border: 1px solid #d9e1da;
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .panel-when {
+        display: grid;
+        gap: 2px;
+        margin: 0 0 0.5rem;
+        color: #5b6862;
+    }
+
+    .panel-when strong {
+        color: #16241b;
+        font-size: 1.15rem;
+    }
+
+    .panel-actions,
+    .panel-host-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .panel-actions .detail-button,
+    .panel-host-actions .detail-button,
+    .panel-actions form,
+    .panel-actions .register-toggle {
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+    }
+
+    .panel-actions form {
+        margin: 0;
+    }
+
+    .panel-actions .calendar-menu {
+        display: block;
+        margin: 0;
+    }
+
+    .panel-actions .calendar-menu > summary {
+        display: flex;
+        justify-content: center;
+    }
+
+    .panel-host-actions {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #d9e1da;
+    }
+
+    @media (min-width: 900px) {
+        .detail-layout {
+            grid-template-columns: minmax(0, 1fr) 320px;
+            column-gap: 1.5rem;
+            align-items: start;
+        }
+
+        .detail-layout > * {
+            grid-column: 1;
+        }
+
+        .detail-layout > .detail-panel {
+            position: sticky;
+            top: 1rem;
+            grid-column: 2;
+            grid-row: 1 / span 20;
+        }
+    }
+
+    /* Events without a photo get a short strip, not a full banner. */
+    .detail-image.is-placeholder {
+        max-height: 120px;
+        object-fit: contain;
+        padding: 1rem 0;
+        background: #e7ede6;
     }
 
     .detail-meta {
@@ -551,6 +639,7 @@
     {% include "events/_site_header.html" %}
 <div class="detail-page">
     <p class="detail-back"><a href="{% url 'search' %}">Search events</a></p>
+<div class="detail-layout">
 
     <main class="detail-card">
         {% for message in messages %}
@@ -564,11 +653,11 @@
         {% endif %}
 
         <img
-            class="detail-image"
+            class="detail-image{% if not event.image_url %} is-placeholder{% endif %}"
             src="{% if event.image_url %}{{ event.image_url }}{% else %}{% static 'events/no-image.svg' %}{% endif %}"
             data-placeholder="{% static 'events/no-image.svg' %}"
             alt="{% if event.image_url %}Image for {{ event.title }}{% else %}No image available{% endif %}"
-            onerror="this.onerror=null;this.src=this.dataset.placeholder"
+            onerror="this.onerror=null;this.src=this.dataset.placeholder;this.classList.add('is-placeholder')"
         >
 
         <h1>{{ event.title }}</h1>
@@ -576,13 +665,6 @@
           <p class="event-host">
             Hosted by <strong>{{ event.host.display_name|default:event.host.username }}</strong>
           </p>
-        {% endif %}
-        {% if can_manage %}
-            <p class="detail-actions">
-                <a class="detail-button" href="{% url 'event_manage' event.pk %}">Manage event</a>
-                <a class="detail-button" href="{% url 'event_edit' event.pk %}">Edit event</a>
-                <a class="detail-button danger-button" href="{% url 'event_cancel' event.pk %}">Cancel event</a>
-            </p>
         {% endif %}
 
         <h2>Event details</h2>
@@ -601,10 +683,6 @@
                 {% endif %}
             {% endtimezone %}
         </div>
-
-        {% if calendar_available %}
-            {% include "events/_add_to_calendar.html" %}
-        {% endif %}
 
         {% if event.location or event.park_names %}
             <p class="detail-meta">
@@ -647,7 +725,20 @@
             {% endif %}
         </div>
 
-        <div class="detail-actions">
+    </main>
+
+    <aside class="detail-panel" aria-label="Event actions">
+        <p class="panel-when">
+            {% timezone "America/New_York" %}
+                {% if event.start_time %}
+                    <strong>{{ event.start_time|date:"D, M j" }}</strong>
+                    <span>{{ event.start_time|date:"g:i A" }}{% if event.end_time %} – {{ event.end_time|date:"g:i A" }}{% endif %}</span>
+                {% else %}
+                    <strong>Date to be announced</strong>
+                {% endif %}
+            {% endtimezone %}
+        </p>
+        <div class="detail-actions panel-actions">
             {% if event.registration_url and not host_cancelled %}
                 <a class="detail-button" href="{{ event.registration_url }}">
                     External Registration
@@ -715,6 +806,10 @@
                 {% endif %}
             {% endif %}
 
+            {% if calendar_available %}
+                {% include "events/_add_to_calendar.html" %}
+            {% endif %}
+
             {% if event.event_url %}
                 <a class="detail-button" href="{{ event.event_url }}">
                     Official Event Page
@@ -729,7 +824,14 @@
             </a>
             {% endif %}
         </div>
-    </main>
+        {% if can_manage %}
+            <p class="detail-actions panel-host-actions">
+                <a class="detail-button" href="{% url 'event_manage' event.pk %}">Manage event</a>
+                <a class="detail-button" href="{% url 'event_edit' event.pk %}">Edit event</a>
+                <a class="detail-button danger-button" href="{% url 'event_cancel' event.pk %}">Cancel event</a>
+            </p>
+        {% endif %}
+    </aside>
 
     {% if can_manage %}
         <section class="community-section">
@@ -1151,6 +1253,7 @@
             {% endfor %}
         </div>
     </section>
+</div>
 </div>
 
     {% include "chatbot/widget.html" %}
