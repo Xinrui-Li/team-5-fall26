@@ -8,6 +8,11 @@ from django.utils import timezone
 from .filters import CATEGORY_SLUGS, NYC_TIMEZONE, nyc_today
 from .search import event_search_vector
 
+# Feed categories with an illustration of their own instead of their group's.
+CATEGORY_IMAGE_NAMES = {"Swimming/Aquatics": "swimming", "Theater": "theater"}
+# Groups that describe an audience rather than an activity get no illustration.
+UNILLUSTRATED_GROUPS = ("seniors",)
+
 
 class Event(models.Model):
     """One event, either copied from the NYC Parks feed or posted by a user.
@@ -109,18 +114,22 @@ class Event(models.Model):
     def category_image(self):
         """Return the static path of the illustration shown without a photo.
 
-        Uses the first listed category that belongs to a filter group. The
-        feed tags most classes "Fitness" before what they really are, such as
-        yoga or dance, so Fitness only wins when nothing more specific is
-        listed. Events whose categories fit no group get a general park scene.
+        Uses the first listed category with an illustration: its own, like
+        swimming, or else its filter group's. The feed tags most classes
+        "Fitness" before what they really are, such as yoga or dance, so
+        Fitness only wins when nothing more specific is listed. Events with no
+        illustrated category get a general park scene.
         """
-        slugs = [
-            CATEGORY_SLUGS.get(name.strip()) for name in self.categories.split("|")
+        names = [name.strip() for name in self.categories.split("|")]
+        images = [
+            CATEGORY_IMAGE_NAMES.get(name) or CATEGORY_SLUGS.get(name) for name in names
         ]
-        slugs = [slug for slug in slugs if slug]
-        specific = [slug for slug in slugs if slug != "fitness"]
-        slug = (specific or slugs or ["park"])[0]
-        return f"events/categories/{slug}.webp"
+        images = [
+            image for image in images if image and image not in UNILLUSTRATED_GROUPS
+        ]
+        specific = [image for image in images if image != "fitness"]
+        image = (specific or images or ["park"])[0]
+        return f"events/categories/{image}.webp"
 
     @property
     def has_ended(self):

@@ -58,13 +58,15 @@ Run it once to seed your local database.
 ### Events without a photo
 
 Cards and event pages show an illustration for the event's category when it
-has no photo, or when its photo fails to load. There is one image per filter
-category in `events/static/events/categories/`, named after the category's
-slug (for example `kids.webp`), plus `park.webp` for events whose categories
-fit no filter group. The first listed category with a group decides the
-picture, except that Fitness only wins when nothing more specific, such as
-yoga or dance, is listed. A new filter category needs an image with its slug;
-a test fails until it has one.
+has no photo, or when its photo fails to load. The images are in
+`events/static/events/categories/`, one per filter category, named after the
+category's slug (for example `kids.webp`). Swimming and theater have their
+own images (`CATEGORY_IMAGE_NAMES` in `events/models.py`), Seniors has none
+because it describes an audience rather than an activity, and `park.webp`
+covers events with no illustrated category. The first listed category with
+an image decides the picture, except that Fitness only wins when nothing more
+specific, such as yoga or dance, is listed. A test fails if a category points
+at a missing image.
 
 ## Event search
 

@@ -9,7 +9,7 @@ from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
 from events.filters import CATEGORY_GROUPS
-from events.models import Event
+from events.models import CATEGORY_IMAGE_NAMES, UNILLUSTRATED_GROUPS, Event
 
 NYC = ZoneInfo("America/New_York")
 
@@ -22,13 +22,34 @@ def image_for(categories):
 class CategoryImageTests(SimpleTestCase):
     """Each event picks the illustration of its category group."""
 
-    def test_every_group_and_the_fallback_have_an_image_file(self):
+    def test_every_illustration_has_an_image_file(self):
         """No category can point at a missing file."""
-        for slug in [slug for slug, _, _ in CATEGORY_GROUPS] + ["park"]:
-            with self.subTest(slug=slug):
+        groups = [slug for slug, _, _ in CATEGORY_GROUPS]
+        groups = [slug for slug in groups if slug not in UNILLUSTRATED_GROUPS]
+        for image in [*groups, *CATEGORY_IMAGE_NAMES.values(), "park"]:
+            with self.subTest(image=image):
                 self.assertIsNotNone(
-                    finders.find(f"events/categories/{slug}.webp"), slug
+                    finders.find(f"events/categories/{image}.webp"), image
                 )
+
+    def test_some_categories_have_their_own_illustration(self):
+        """Swimming and theater get their own pictures, not their group's."""
+        self.assertEqual(
+            image_for("Swimming/Aquatics"), "events/categories/swimming.webp"
+        )
+        self.assertEqual(image_for("Theater"), "events/categories/theater.webp")
+        self.assertEqual(image_for("Art"), "events/categories/art.webp")
+
+    def test_audience_groups_defer_to_the_activity(self):
+        """A seniors fitness class shows fitness; seniors has no picture."""
+        self.assertEqual(
+            image_for("Fitness | Shape Up NYC | Seniors | Exercise Classes"),
+            "events/categories/fitness.webp",
+        )
+        self.assertEqual(image_for("Seniors|Art"), "events/categories/art.webp")
+        self.assertEqual(
+            image_for("Seniors & Accessible"), "events/categories/park.webp"
+        )
 
     def test_feed_category_names_map_to_their_group(self):
         """The feed's own names, like "Best for Kids", use their group's image."""
@@ -44,7 +65,8 @@ class CategoryImageTests(SimpleTestCase):
             image_for("Arts & Crafts | Games"), "events/categories/art.webp"
         )
         self.assertEqual(
-            image_for("Seniors & Accessible"), "events/categories/seniors.webp"
+            image_for("Nature & Outdoors | Kids & Family"),
+            "events/categories/nature.webp",
         )
 
     def test_first_category_with_a_group_wins(self):
