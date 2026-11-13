@@ -239,6 +239,25 @@ def send_contact_request(request, event_id, user_id):
     else:
         messages.info(request, "Your contact request is already waiting for a reply.")
 
+    if contact_request is None:
+        messages.error(request, "This contact request is no longer available.")
+    elif not created:
+        if contact_request.status == ContactRequest.Status.ACCEPTED:
+            messages.info(request, "You are already connected with this person.")
+        elif contact_request.sender_id == request.user.pk:
+            messages.info(
+                request, "Your contact request is already awaiting a response."
+            )
+        else:
+            messages.info(
+                request,
+                "This person already sent you a request. Respond in notifications.",
+            )
+    elif contact_request.status == ContactRequest.Status.ACCEPTED:
+        messages.success(request, "You can now message this person.")
+    else:
+        messages.success(request, "Your contact request was sent.")
+
     return redirect(event_detail_url(event_id))
 
 
