@@ -5,7 +5,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
-from .filters import NYC_TIMEZONE, nyc_today
+from .filters import CATEGORY_SLUGS, NYC_TIMEZONE, nyc_today
 from .search import event_search_vector
 
 
@@ -104,6 +104,23 @@ class Event(models.Model):
         card tag only has room for the first name.
         """
         return self.categories.split("|")[0].strip()
+
+    @property
+    def category_image(self):
+        """Return the static path of the illustration shown without a photo.
+
+        Uses the first listed category that belongs to a filter group. The
+        feed tags most classes "Fitness" before what they really are, such as
+        yoga or dance, so Fitness only wins when nothing more specific is
+        listed. Events whose categories fit no group get a general park scene.
+        """
+        slugs = [
+            CATEGORY_SLUGS.get(name.strip()) for name in self.categories.split("|")
+        ]
+        slugs = [slug for slug in slugs if slug]
+        specific = [slug for slug in slugs if slug != "fitness"]
+        slug = (specific or slugs or ["park"])[0]
+        return f"events/categories/{slug}.webp"
 
     @property
     def has_ended(self):

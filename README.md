@@ -55,6 +55,17 @@ window, but events stay in the database after they disappear from it.
 
 Run it once to seed your local database.
 
+### Events without a photo
+
+Cards and event pages show an illustration for the event's category when it
+has no photo, or when its photo fails to load. There is one image per filter
+category in `events/static/events/categories/`, named after the category's
+slug (for example `kids.webp`), plus `park.webp` for events whose categories
+fit no filter group. The first listed category with a group decides the
+picture, except that Fitness only wins when nothing more specific, such as
+yoga or dance, is listed. A new filter category needs an image with its slug;
+a test fails until it has one.
+
 ## Event search
 
 The search bar at the top of the landing page submits to `/search?q=...`.
