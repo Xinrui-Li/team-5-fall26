@@ -2,7 +2,7 @@
 
 from django.db import transaction
 
-from accounts.ban_services import require_unbanned_user
+from accounts.ban_services import get_active_ban, require_unbanned_user
 from accounts.models import ContactPermission, User
 
 from .models import ContactRequest, Conversation, Event, EventInterest
@@ -23,6 +23,7 @@ def create_contact_request(
         if (
             event.status != Event.Status.UPCOMING
             or sender.pk == recipient.pk
+            or get_active_ban(recipient) is not None
             or not recipient.share_profile_with_attendees
             or not EventInterest.objects.filter(event=event, user=sender).exists()
             or not EventInterest.objects.filter(event=event, user=recipient).exists()
