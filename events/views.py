@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Case, Exists, F, OuterRef, Sum, Value, When
+from django.db.models import Case, Exists, F, OuterRef, Q, Sum, Value, When
 from django.http import Http404, HttpResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -561,24 +561,30 @@ class EventDetailView(DetailView):
         if context["can_manage"]:
             context["recipient_count"] = interested_recipients(event).count()
 
-        # Find contact requests sent by the current user.
+        # Contact requests are per pair of users, even if they began at
+        # another event or the current viewer was the recipient.
         request_by_recipient = {}
 
         if is_authenticated:
             requests = (
                 ContactRequest.objects.filter(
-                    event=event,
-                    sender=user,
+                    Q(sender=user) | Q(recipient=user),
+                    status__in=(
+                        ContactRequest.Status.PENDING,
+                        ContactRequest.Status.ACCEPTED,
+                    ),
                 )
-                .exclude(status=ContactRequest.Status.DECLINED)
-                .order_by("-created_at")
+                .select_related("event")
+                .order_by("-created_at", "-pk")
             )
 
             for contact_request in requests:
-                request_by_recipient.setdefault(
-                    contact_request.recipient_id,
-                    contact_request,
+                other_user_id = (
+                    contact_request.recipient_id
+                    if contact_request.sender_id == user.pk
+                    else contact_request.sender_id
                 )
+                request_by_recipient.setdefault(other_user_id, contact_request)
 
         # Include all users who have chosen to share their profiles.
         # Do not exclude the current user: their avatar should also move
