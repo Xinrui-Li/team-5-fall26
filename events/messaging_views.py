@@ -39,7 +39,17 @@ def _shared_events(first_user, second_user):
 
 def _shared_upcoming_events(first_user, second_user):
     """Return shared events that still accept new contact requests."""
-    return _shared_events(first_user, second_user).filter(status=Event.Status.UPCOMING)
+    shared_events = _shared_events(first_user, second_user).filter(
+        status=Event.Status.UPCOMING
+    )
+    # Use the same model rules as create_contact_request. In particular,
+    # status alone can be stale and feed cancellations appear in the title.
+    eligible_ids = [
+        event.pk
+        for event in shared_events
+        if event.is_open and not event.is_cancelled
+    ]
+    return shared_events.filter(pk__in=eligible_ids)
 
 
 def _message_data(message):
