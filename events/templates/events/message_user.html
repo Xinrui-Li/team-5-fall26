@@ -15,12 +15,6 @@
         <a class="search-back" href="{% url 'public_profile' username=recipient.username %}">Back to profile</a>
         <h1>Message {{ recipient.get_display_name }}</h1>
 
-        {% if messages %}
-        <ul class="message-alerts">
-            {% for alert in messages %}<li>{{ alert }}</li>{% endfor %}
-        </ul>
-        {% endif %}
-
         {% if viewer_banned %}
         <section class="contact-pending" role="status">
             <p>{{ ban_message }}</p>

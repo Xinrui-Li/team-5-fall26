@@ -136,7 +136,7 @@ def _report(
             request.user, kind, target, form.cleaned_data, conversation=conversation
         )
         if created:
-            messages.success(request, "Your report has been submitted.")
+            messages.success(request, "Report sent. Our moderators will review it.")
         else:
             messages.info(request, already_reported)
         return redirect(back_url)
