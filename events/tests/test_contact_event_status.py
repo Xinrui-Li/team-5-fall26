@@ -3,6 +3,7 @@
 from datetime import timedelta
 
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
@@ -74,3 +75,66 @@ class ContactEventStatusTests(TestCase):
         )
         self.assertTrue(created)
         self.assertEqual(result.event, event)
+
+    def test_profile_form_only_lists_eligible_shared_events(self):
+        """Past and cancelled events cannot be chosen in the profile form."""
+        valid = self.event_with_interest(
+            "future-available",
+            start_time=timezone.now() + timedelta(days=4),
+        )
+        expired = self.event_with_interest(
+            "ended-in-feed",
+            start_time=timezone.now() - timedelta(days=4),
+        )
+        cancelled = self.event_with_interest(
+            "feed-cancelled",
+            title="   CANCELED Weekly Meetup",
+            start_time=timezone.now() + timedelta(days=4),
+        )
+        self.client.force_login(self.sender)
+        response = self.client.get(reverse("message_user", args=[self.recipient.pk]))
+        self.assertContains(response, "Send Contact Request")
+        choice_ids = list(response.context["form"].fields["event"].queryset.values_list(
+            "pk", flat=True
+        ))
+        self.assertEqual(choice_ids, [valid.pk])
+        self.assertNotIn(expired.pk, choice_ids)
+        self.assertNotIn(cancelled.pk, choice_ids)
+
+    def test_profile_form_shows_empty_state_if_no_eligible_events(self):
+        """Do not offer an unusable contact form when all events are over."""
+        self.event_with_interest(
+            "past-only", start_time=timezone.now() - timedelta(days=3)
+        )
+        self.event_with_interest(
+            "cancelled-only",
+            title="CANCELLED Weekend Meetup",
+            start_time=timezone.now() + timedelta(days=3),
+        )
+        self.client.force_login(self.sender)
+        url = reverse("message_user", args=[self.recipient.pk])
+        response = self.client.get(url)
+        self.assertContains(response, "You need to share an upcoming event")
+        self.assertNotContains(response, 'class="message-form"')
+        self.assertFalse(response.context["has_shared_events"])
+
+    def test_cannot_post_an_expired_or_cancelled_event_from_profile(self):
+        """Forged IDs for events removed from the choices must not be sent."""
+        expired = self.event_with_interest(
+            "expired-post", start_time=timezone.now() - timedelta(days=2)
+        )
+        cancelled = self.event_with_interest(
+            "cancelled-post",
+            title="CANCELED Game Night",
+            start_time=timezone.now() + timedelta(days=2),
+        )
+        self.client.force_login(self.sender)
+        url = reverse("message_user", args=[self.recipient.pk])
+        for event in (expired, cancelled):
+            with self.subTest(event=event.pk):
+                response = self.client.post(
+                    url, {"event": event.pk, "message": "Hello"}
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertNotContains(response, 'class="message-form"')
+                self.assertFalse(ContactRequest.objects.exists())
