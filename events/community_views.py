@@ -191,7 +191,9 @@ def send_contact_request(request, event_id, user_id):
         if contact_request.status == ContactRequest.Status.ACCEPTED:
             messages.info(request, "You are already connected with this person.")
         elif contact_request.sender_id == request.user.pk:
-            messages.info(request, "Your contact request is already awaiting a response.")
+            messages.info(
+                request, "Your contact request is already awaiting a response."
+            )
         else:
             messages.info(
                 request,
