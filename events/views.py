@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Case, Exists, F, OuterRef, Sum, Value, When
+from django.db.models import Case, Exists, F, OuterRef, Q, Sum, Value, When
 from django.http import Http404, HttpResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -30,6 +30,7 @@ from django.utils.http import (
 )
 
 from accounts.ban_services import get_active_ban
+from accounts.models import UserBan
 
 from .calendar_export import (
     can_add_to_calendar,
@@ -583,9 +584,14 @@ class EventDetailView(DetailView):
         # Include all users who have chosen to share their profiles.
         # Do not exclude the current user: their avatar should also move
         # between the two groups when they change their intention.
+        active_bans = UserBan.objects.filter(
+            user_id=OuterRef("user_id"),
+            lifted_at__isnull=True,
+        ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
         visible_interests = (
             interests.filter(user__share_profile_with_attendees=True)
             .select_related("user")
+            .annotate(recipient_banned=Exists(active_bans))
             .order_by("user__display_name", "user__username")
         )
 
@@ -594,6 +600,7 @@ class EventDetailView(DetailView):
                 "user": interest.user,
                 "status": interest.status,
                 "contact_request": request_by_recipient.get(interest.user_id),
+                "recipient_banned": interest.recipient_banned,
             }
             for interest in visible_interests
         ]
