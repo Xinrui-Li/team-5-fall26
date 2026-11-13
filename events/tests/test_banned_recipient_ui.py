@@ -93,7 +93,7 @@ class BannedRecipientContactTests(TestCase):
 
     def test_approved_chat_remains_available_during_recipient_ban(self):
         """An accepted contact can still open the existing conversation."""
-                ContactRequest.objects.create(
+        ContactRequest.objects.create(
             event=self.event,
             sender=self.sender,
             recipient=self.recipient,
