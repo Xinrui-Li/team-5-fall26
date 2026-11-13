@@ -1,5 +1,6 @@
 """Views for event interests, discussions, and contact requests."""
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
@@ -176,13 +177,30 @@ def send_contact_request(request, event_id, user_id):
     if not form.is_valid():
         return redirect(event_detail_url(event_id))
 
-    create_contact_request(
+    contact_request, created = create_contact_request(
         event,
         request.user,
         recipient,
         form.cleaned_data["message"],
         notification_sender=notify_contact_request,
     )
+
+    if contact_request is None:
+        messages.error(request, "This contact request is no longer available.")
+    elif not created:
+        if contact_request.status == ContactRequest.Status.ACCEPTED:
+            messages.info(request, "You are already connected with this person.")
+        elif contact_request.sender_id == request.user.pk:
+            messages.info(request, "Your contact request is already awaiting a response.")
+        else:
+            messages.info(
+                request,
+                "This person already sent you a request. Respond in notifications.",
+            )
+    elif contact_request.status == ContactRequest.Status.ACCEPTED:
+        messages.success(request, "You can now message this person.")
+    else:
+        messages.success(request, "Your contact request was sent.")
 
     return redirect(event_detail_url(event_id))
 
