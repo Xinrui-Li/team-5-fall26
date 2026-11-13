@@ -200,6 +200,12 @@ def send_contact_request(request, event_id, user_id):
         )
         return redirect(event_detail_url(event_id))
 
+    if get_active_ban(recipient) is not None:
+        messages.error(
+            request, "Contact requests are currently unavailable for this member."
+        )
+        return redirect(event_detail_url(event_id))
+
     form = ContactRequestForm(request.POST)
 
     if not form.is_valid():
@@ -216,11 +222,16 @@ def send_contact_request(request, event_id, user_id):
         notification_sender=notify_contact_request,
     )
     if contact_request is None:
-        messages.error(
-            request,
-            "This contact request can't be sent. Make sure you are both "
-            "interested in this upcoming event, then try again.",
-        )
+        if get_active_ban(recipient) is not None:
+            messages.error(
+                request, "Contact requests are currently unavailable for this member."
+            )
+        else:
+            messages.error(
+                request,
+                "This contact request can't be sent. Make sure you are both "
+                "interested in this upcoming event, then try again.",
+            )
     elif contact_request.status == ContactRequest.Status.ACCEPTED:
         messages.success(request, "You're connected. You can message them now.")
     elif created:
