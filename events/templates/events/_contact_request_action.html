@@ -11,6 +11,8 @@
         </p>
     {% elif viewer_banned %}
         <p class="attendee-contact-note">Contact requests are disabled while your account is banned.</p>
+    {% elif attendee.recipient_banned %}
+        <p class="attendee-contact-note">Contact requests are currently unavailable for this member.</p>
     {% elif can_interact and user_has_interest %}
         <form method="post" action="{% url 'send_contact_request' event.pk attendee.user.pk %}">
             {% csrf_token %}
