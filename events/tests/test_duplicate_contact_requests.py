@@ -100,9 +100,7 @@ class DuplicateContactRequestTests(TestCase):
         self.assertContains(page, "Your contact request about First Event")
         self.assertNotContains(
             page,
-            reverse(
-                "send_contact_request", args=[self.second.pk, self.recipient.pk]
-            ),
+            reverse("send_contact_request", args=[self.second.pk, self.recipient.pk]),
         )
         self.assertEqual(ContactRequest.objects.count(), 1)
 
@@ -129,9 +127,7 @@ class DuplicateContactRequestTests(TestCase):
         self.assertContains(page, "Open messages")
         self.assertNotContains(
             page,
-            reverse(
-                "send_contact_request", args=[self.second.pk, self.recipient.pk]
-            ),
+            reverse("send_contact_request", args=[self.second.pk, self.recipient.pk]),
         )
 
     def test_posting_again_on_second_event_explains_reused_request(self):
