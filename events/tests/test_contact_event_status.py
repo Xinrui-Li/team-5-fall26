@@ -94,9 +94,8 @@ class ContactEventStatusTests(TestCase):
         self.client.force_login(self.sender)
         response = self.client.get(reverse("message_user", args=[self.recipient.pk]))
         self.assertContains(response, "Send Contact Request")
-        choice_ids = list(response.context["form"].fields["event"].queryset.values_list(
-            "pk", flat=True
-        ))
+        event_choices = response.context["form"].fields["event"].queryset
+        choice_ids = list(event_choices.values_list("pk", flat=True))
         self.assertEqual(choice_ids, [valid.pk])
         self.assertNotIn(expired.pk, choice_ids)
         self.assertNotIn(cancelled.pk, choice_ids)
