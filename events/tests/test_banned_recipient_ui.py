@@ -99,7 +99,9 @@ class BannedRecipientContactTests(TestCase):
             recipient=self.recipient,
             status=ContactRequest.Status.ACCEPTED,
         )
-        page = self.client.get(reverse("public_profile", args=[self.recipient.username]))
+        page = self.client.get(
+            reverse("public_profile", args=[self.recipient.username])
+        )
         self.assertContains(page, reverse("message_user", args=[self.recipient.pk]))
         response = self.client.get(reverse("message_user", args=[self.recipient.pk]))
         self.assertEqual(response.status_code, 302)
