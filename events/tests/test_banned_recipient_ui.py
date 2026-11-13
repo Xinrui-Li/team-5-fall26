@@ -51,17 +51,13 @@ class BannedRecipientContactTests(TestCase):
         )
         self.assertNotContains(
             response,
-            reverse(
-                "send_contact_request", args=[self.event.pk, self.recipient.pk]
-            ),
+            reverse("send_contact_request", args=[self.event.pk, self.recipient.pk]),
         )
 
     def test_event_post_rejects_banned_recipient_with_feedback(self):
         """A direct submission must not fail silently."""
         response = self.client.post(
-            reverse(
-                "send_contact_request", args=[self.event.pk, self.recipient.pk]
-            ),
+            reverse("send_contact_request", args=[self.event.pk, self.recipient.pk]),
             {"message": "Hi"},
             follow=True,
         )
@@ -77,9 +73,7 @@ class BannedRecipientContactTests(TestCase):
         self.assertNotContains(response, 'class="message-form"')
         self.assertNotContains(response, "You need to share an upcoming event")
 
-        post = self.client.post(
-            url, {"event": self.event.pk, "message": "Hi"}
-        )
+        post = self.client.post(url, {"event": self.event.pk, "message": "Hi"})
         self.assertContains(post, "Contact requests are currently unavailable")
         self.assertFalse(ContactRequest.objects.exists())
         self.assertFalse(Notification.objects.exists())
@@ -91,9 +85,7 @@ class BannedRecipientContactTests(TestCase):
         response = self.client.get(reverse("event_detail", args=[self.event.pk]))
         self.assertContains(
             response,
-            reverse(
-                "send_contact_request", args=[self.event.pk, self.recipient.pk]
-            ),
+            reverse("send_contact_request", args=[self.event.pk, self.recipient.pk]),
         )
         page = self.client.get(reverse("message_user", args=[self.recipient.pk]))
         self.assertContains(page, "Send Contact Request")
