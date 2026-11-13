@@ -1,6 +1,7 @@
 """Shared contact-request workflows."""
 
 from django.db import transaction
+from django.db.models import Q
 
 from accounts.ban_services import require_unbanned_user
 from accounts.models import ContactPermission, User
@@ -18,7 +19,16 @@ def create_contact_request(
 ):
     """Create one eligible event contact request, or return an existing one."""
     with transaction.atomic():
-        User.objects.select_for_update(no_key=True).get(pk=sender.pk)
+        # Lock both users in the same order, including for requests sent in
+        # opposite directions, to prevent duplicate pending invitations.
+        locked = {
+            member.pk: member
+            for member in User.objects.select_for_update(no_key=True)
+            .filter(pk__in=(sender.pk, recipient.pk))
+            .order_by("pk")
+        }
+        sender = locked[sender.pk]
+        recipient = locked[recipient.pk]
         require_unbanned_user(sender)
         if (
             event.status != Event.Status.UPCOMING
@@ -29,13 +39,18 @@ def create_contact_request(
         ):
             return None, False
 
+        # Pending/accepted contact is a user-pair relationship, not an
+        # event-specific one. The earlier request takes priority.
         existing = (
             ContactRequest.objects.filter(
-                event=event,
-                sender=sender,
-                recipient=recipient,
+                Q(sender=sender, recipient=recipient)
+                | Q(sender=recipient, recipient=sender),
+                status__in=(
+                    ContactRequest.Status.PENDING,
+                    ContactRequest.Status.ACCEPTED,
+                ),
             )
-            .exclude(status=ContactRequest.Status.DECLINED)
+            .order_by("-created_at", "-pk")
             .first()
         )
         if existing:
