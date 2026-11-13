@@ -458,7 +458,7 @@ class ChatUserReportingTests(ContentReportTestData, TestCase):
 
     def test_confirmations_and_duplicate_feedback_are_rendered_in_chat(self):
         for expected in (
-            "Your report has been submitted.",
+            "Report sent. Our moderators will review it.",
             "You have already reported this user.",
         ):
             response = self.client.post(
@@ -468,7 +468,7 @@ class ChatUserReportingTests(ContentReportTestData, TestCase):
             )
             self.assertRedirects(response, self.chat_url)
             self.assertContains(response, expected)
-            self.assertContains(response, 'class="message-alerts" role="status"')
+            self.assertContains(response, 'role="status" data-toast-autohide')
 
     def test_recreated_conversation_does_not_bypass_unresolved_user_report(self):
         self.submit(Report.Kind.USER)

@@ -100,7 +100,7 @@ class RegisterWithPartySizeTests(PartySizeTestCase):
 
         registration = Registration.objects.get(event=self.event, user=self.lucy)
         self.assertEqual(registration.party_size, 3)
-        self.assertIn("You're registered for a party of 3.", self.messages_of(response))
+        self.assertIn("Registered for a party of 3.", self.messages_of(response))
 
     def test_registering_alone_has_a_plain_message(self):
         response = self.register(1)
@@ -108,7 +108,7 @@ class RegisterWithPartySizeTests(PartySizeTestCase):
         self.assertEqual(
             Registration.objects.get(event=self.event, user=self.lucy).party_size, 1
         )
-        self.assertIn("You're registered for this event.", self.messages_of(response))
+        self.assertIn("Registered for this event.", self.messages_of(response))
 
     def test_registering_without_a_size_registers_one(self):
         self.register()
@@ -228,9 +228,7 @@ class ChangePartySizeTests(PartySizeTestCase):
         response = self.client.post(self.cancel_url, follow=True)
 
         self.assertFalse(Registration.objects.exists())
-        self.assertIn(
-            "Your registration has been cancelled.", self.messages_of(response)
-        )
+        self.assertIn("Registration cancelled.", self.messages_of(response))
         notification = self.host_notifications().get()
         self.assertEqual(notification.subject, "Registration cancelled for Sunset Yoga")
         self.assertEqual(

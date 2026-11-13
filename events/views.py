@@ -337,14 +337,19 @@ def register_event(request, pk):
 
     # Prevent event hosts from registering for their own events.
     if event.host_id == request.user.pk:
-        messages.error(request, "You cannot register for your own event.")
+        messages.error(
+            request,
+            "You can't register for your own event. "
+            "Use Manage event to see who is coming.",
+        )
         return redirect(next_url)
 
     # Only allow registration for open, non-cancelled events.
     if not event.is_open or event.is_cancelled:
         messages.error(
             request,
-            "This event is no longer accepting registrations.",
+            "This event is no longer taking registrations. "
+            "Search for another upcoming event instead.",
         )
         return redirect(next_url)
 
@@ -370,9 +375,9 @@ def register_event(request, pk):
                 event, request.user, registered=True, party_size=party_size
             )
             if party_size == 1:
-                messages.success(request, "You're registered for this event.")
+                messages.success(request, "Registered for this event.")
             else:
-                messages.success(request, f"You're registered for {party(party_size)}.")
+                messages.success(request, f"Registered for {party(party_size)}.")
         elif changing_size and party_size != previous_size:
             registration.party_size = party_size
             registration.save(update_fields=["party_size"])
@@ -425,7 +430,7 @@ def cancel_registration(request, pk):
     if registration:
         messages.success(
             request,
-            "Your registration has been cancelled.",
+            "Registration cancelled.",
         )
     else:
         messages.info(

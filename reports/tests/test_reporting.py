@@ -92,7 +92,7 @@ class EventReportingTests(ReportTestData, TestCase):
             follow=True,
         )
         self.assertRedirects(response, self.detail_url)
-        self.assertContains(response, "Your report has been submitted.")
+        self.assertContains(response, "Report sent. Our moderators will review it.")
         report = Report.objects.get()
         self.assertEqual(report.reporter, self.reporter)
         self.assertEqual(report.event, self.event)
@@ -382,7 +382,7 @@ class ConcurrentReportTests(ReportTestData, TransactionTestCase):
         self.assertCountEqual(
             confirmations,
             [
-                "Your report has been submitted.",
+                "Report sent. Our moderators will review it.",
                 "You have already reported this event.",
             ],
         )
