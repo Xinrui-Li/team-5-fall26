@@ -1,6 +1,7 @@
 """Regression tests: one contact invitation per pair, across all events."""
 
 from django.test import TestCase
+from django.urls import reverse
 
 from accounts.models import ContactPermission, User
 from events.contact_services import create_contact_request
@@ -87,3 +88,61 @@ class DuplicateContactRequestTests(TestCase):
         )
         self.assertFalse(created)
         self.assertEqual(duplicate.pk, first.pk)
+
+    def test_event_page_reuses_request_from_a_different_event(self):
+        """Do not show a second request form after the first invitation."""
+        self.client.force_login(self.sender)
+        first_url = reverse(
+            "send_contact_request", args=[self.first.pk, self.recipient.pk]
+        )
+        self.client.post(first_url, {"message": "Hi"})
+        page = self.client.get(reverse("event_detail", args=[self.second.pk]))
+        self.assertContains(page, "Your contact request about First Event")
+        self.assertNotContains(
+            page,
+            reverse(
+                "send_contact_request", args=[self.second.pk, self.recipient.pk]
+            ),
+        )
+        self.assertEqual(ContactRequest.objects.count(), 1)
+
+    def test_event_page_handles_reverse_pending_request(self):
+        """The recipient sees their invitation and can respond to it."""
+        create_contact_request(self.first, self.sender, self.recipient, "Hi")
+        self.client.force_login(self.recipient)
+        page = self.client.get(reverse("event_detail", args=[self.second.pk]))
+        self.assertContains(page, "sent you a contact request")
+        self.assertContains(page, reverse("notifications"))
+        self.assertNotContains(
+            page,
+            reverse("send_contact_request", args=[self.second.pk, self.sender.pk]),
+        )
+
+    def test_event_page_shows_message_action_for_accepted_contact(self):
+        """An existing accepted request offers messaging instead of a new form."""
+        self.recipient.contact_permission = ContactPermission.OPEN
+        self.recipient.save(update_fields=["contact_permission"])
+        create_contact_request(self.first, self.sender, self.recipient, "Hi")
+        self.client.force_login(self.sender)
+        page = self.client.get(reverse("event_detail", args=[self.second.pk]))
+        self.assertContains(page, "Contact request accepted.")
+        self.assertContains(page, "Open messages")
+        self.assertNotContains(
+            page,
+            reverse(
+                "send_contact_request", args=[self.second.pk, self.recipient.pk]
+            ),
+        )
+
+    def test_posting_again_on_second_event_explains_reused_request(self):
+        """A stale event form should give feedback instead of failing silently."""
+        create_contact_request(self.first, self.sender, self.recipient, "Hi")
+        self.client.force_login(self.sender)
+        response = self.client.post(
+            reverse("send_contact_request", args=[self.second.pk, self.recipient.pk]),
+            {"message": "Again"},
+            follow=True,
+        )
+        self.assertContains(response, "already awaiting a response")
+        self.assertEqual(ContactRequest.objects.count(), 1)
+        self.assertEqual(Notification.objects.count(), 1)
