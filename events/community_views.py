@@ -1,5 +1,6 @@
 """Views for event interests, discussions, and contact requests."""
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect
@@ -171,18 +172,31 @@ def send_contact_request(request, event_id, user_id):
     ).exists():
         return redirect(event_detail_url(event_id))
 
+    if get_active_ban(recipient) is not None:
+        messages.error(
+            request,
+            "Contact requests are currently unavailable for this member.",
+        )
+        return redirect(event_detail_url(event_id))
+
     form = ContactRequestForm(request.POST)
 
     if not form.is_valid():
         return redirect(event_detail_url(event_id))
 
-    create_contact_request(
+    contact_request, _ = create_contact_request(
         event,
         request.user,
         recipient,
         form.cleaned_data["message"],
         notification_sender=notify_contact_request,
     )
+    # The recipient may have been banned after the form was displayed.
+    if contact_request is None and get_active_ban(recipient) is not None:
+        messages.error(
+            request,
+            "Contact requests are currently unavailable for this member.",
+        )
 
     return redirect(event_detail_url(event_id))
 
