@@ -155,7 +155,9 @@ def message_user(request, user_id):
             )
             if contact_request is None:
                 if get_active_ban(recipient) is not None:
-                    error = "Contact requests are currently unavailable for this member."
+                    error = (
+                        "Contact requests are currently unavailable for this member."
+                    )
                 else:
                     error = "Choose an upcoming event that you both are interested in."
                 messages.error(request, error)
