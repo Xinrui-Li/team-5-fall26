@@ -1,7 +1,6 @@
 """Shared contact-request workflows."""
 
-from django.db import transaction
-
+from django.db import models, transaction
 from accounts.ban_services import require_unbanned_user
 from accounts.models import ContactPermission, User
 
@@ -30,10 +29,10 @@ def create_contact_request(
             return None, False
 
         existing = (
-            ContactRequest.objects.filter(
-                event=event,
-                sender=sender,
-                recipient=recipient,
+            ContactRequest.objects.filter(event=event)
+            .filter(
+                models.Q(sender=sender, recipient=recipient)
+                | models.Q(sender=recipient, recipient=sender)
             )
             .exclude(status=ContactRequest.Status.DECLINED)
             .first()

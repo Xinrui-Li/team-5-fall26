@@ -3,6 +3,8 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from accounts.ban_services import apply_ban
+from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
 from django.test import TestCase
@@ -230,6 +232,45 @@ class ContactRequestViewTests(CommunityViewTestBase):
             ["Contact request sent."],
         )
 
+    @patch("events.community_views.create_contact_request")
+    def test_contact_request_failure_displays_error_message(self, mock_create):
+        mock_create.return_value = (None, False)
+
+        response = self.client.post(
+            self.send_url(),
+            {"message": "Hello"},
+        )
+
+        self.assertRedirects(response, self.detail_url())
+        self.assertEqual(ContactRequest.objects.count(), 0)
+        self.assertEqual(
+            self.messages_for(response),
+            [
+                "This contact request can't be sent. Make sure you are both "
+                "interested in this upcoming event, then try again."
+            ],
+        )
+
+    def test_banned_recipient_cannot_receive_contact_request(self):
+        admin = User.objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="pass12345",
+        )
+        apply_ban(admin, self.bob)
+
+        response = self.client.post(
+            self.send_url(),
+            {"message": "Hello"},
+        )
+
+        self.assertRedirects(response, self.detail_url())
+        self.assertEqual(ContactRequest.objects.count(), 0)
+        self.assertEqual(
+            self.messages_for(response),
+            ["Contact requests are currently unavailable for this member."],
+        )
+
     def test_open_contact_permission_accepts_request_automatically(self):
         self.bob.contact_permission = ContactPermission.OPEN
         self.bob.save()
@@ -310,6 +351,26 @@ class ContactRequestViewTests(CommunityViewTestBase):
         self.assertEqual(
             self.messages_for(response),
             ["Your contact request is already awaiting a response."],
+        )
+
+    def test_incoming_request_displays_info_message(self):
+        ContactRequest.objects.create(
+            event=self.event,
+            sender=self.bob,
+            recipient=self.alice,
+            message="Hi, let's connect!",
+        )
+
+        response = self.client.post(
+            self.send_url(),
+            {"message": "I'd also like to connect."},
+        )
+
+        self.assertRedirects(response, self.detail_url())
+        self.assertEqual(ContactRequest.objects.count(), 1)
+        self.assertEqual(
+            self.messages_for(response),
+            ["This person already sent you a request. Respond in notifications."],
         )
 
     def test_duplicate_accepted_request_is_not_created(self):
