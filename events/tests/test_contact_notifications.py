@@ -1,5 +1,7 @@
 """Contact request delivery, resolution, ordering, and transaction tests."""
 
+from django.contrib.messages.storage.fallback import FallbackStorage
+from django.contrib.sessions.middleware import SessionMiddleware
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Barrier
@@ -411,6 +413,10 @@ class ConcurrentContactNotificationTests(TransactionTestCase):
             close_old_connections()
             try:
                 request = RequestFactory().post("/")
+
+                SessionMiddleware(lambda req: None).process_request(request)
+                request._messages = FallbackStorage(request)
+
                 request.user = get_user_model().objects.get(pk=user_id)
                 barrier.wait(timeout=10)
                 try:
