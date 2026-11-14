@@ -18,10 +18,6 @@
             {% if viewer_banned %}Answering is disabled while your account is banned.{% else %}Your answer is sent back to the person who asked, translated into their language.{% endif %}
         </p>
 
-        {% for message in messages %}
-        <p class="inquiries-status{% if message.tags %} is-{{ message.tags }}{% endif %}" role="status">{{ message }}</p>
-        {% endfor %}
-
         <section aria-labelledby="open-heading">
             <h2 id="open-heading">Waiting for an answer{% if open_inquiries %} <span class="count-pill">{{ open_inquiries|length }}</span>{% endif %}</h2>
             {% if open_inquiries %}

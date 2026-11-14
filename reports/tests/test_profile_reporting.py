@@ -139,8 +139,8 @@ class ProfileReportingTests(ProfileReportTestData, TestCase):
             follow=True,
         )
         self.assertRedirects(response, self.profile_url)
-        self.assertContains(response, "Your report has been submitted.")
-        self.assertContains(response, 'class="profile-alerts" role="status"')
+        self.assertContains(response, "Report sent. Our moderators will review it.")
+        self.assertContains(response, 'class="toast toast-success" role="status"')
         report = Report.objects.get()
         self.assertEqual(report.kind, Report.Kind.PROFILE)
         self.assertEqual(report.reporter, self.viewer)
@@ -439,7 +439,7 @@ class ConcurrentProfileReportTests(ProfileReportTestData, TransactionTestCase):
                 for message in response.wsgi_request._messages
             ],
             [
-                "Your report has been submitted.",
+                "Report sent. Our moderators will review it.",
                 "You have already reported this profile.",
             ],
         )

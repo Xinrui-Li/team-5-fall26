@@ -122,8 +122,11 @@ class PublicProfileView(LoginRequiredMixin, DetailView):
                 .filter(interests__user=profile_user)
                 .exists()
             )
-            context["can_message"] = (
-                has_accepted_request or has_pending_request or has_shared_upcoming_event
+            # Banned recipients cannot receive new invitations, but an
+            # already-approved conversation should remain reachable.
+            context["can_message"] = has_accepted_request or (
+                context["profile_ban"] is None
+                and (has_pending_request or has_shared_upcoming_event)
             )
         else:
             context["can_message"] = False

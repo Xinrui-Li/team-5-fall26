@@ -370,12 +370,6 @@
     {% include "events/_site_header.html" %}
 
     <main class="public-profile">
-        {% if messages %}
-        <ul class="profile-alerts" role="status">
-            {% for alert in messages %}<li>{{ alert }}</li>{% endfor %}
-        </ul>
-        {% endif %}
-
         <div class="profile-page-heading">
             <div>
                 <h1>Community Profile</h1>

@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Case, Exists, F, OuterRef, Sum, Value, When
+from django.db.models import Case, Exists, F, OuterRef, Q, Sum, Value, When
 from django.http import Http404, HttpResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -30,6 +30,7 @@ from django.utils.http import (
 )
 
 from accounts.ban_services import get_active_ban
+from accounts.models import UserBan
 
 from .calendar_export import (
     can_add_to_calendar,
@@ -337,14 +338,19 @@ def register_event(request, pk):
 
     # Prevent event hosts from registering for their own events.
     if event.host_id == request.user.pk:
-        messages.error(request, "You cannot register for your own event.")
+        messages.error(
+            request,
+            "You can't register for your own event. "
+            "Use Manage event to see who is coming.",
+        )
         return redirect(next_url)
 
     # Only allow registration for open, non-cancelled events.
     if not event.is_open or event.is_cancelled:
         messages.error(
             request,
-            "This event is no longer accepting registrations.",
+            "This event is no longer taking registrations. "
+            "Search for another upcoming event instead.",
         )
         return redirect(next_url)
 
@@ -370,9 +376,9 @@ def register_event(request, pk):
                 event, request.user, registered=True, party_size=party_size
             )
             if party_size == 1:
-                messages.success(request, "You're registered for this event.")
+                messages.success(request, "Registered for this event.")
             else:
-                messages.success(request, f"You're registered for {party(party_size)}.")
+                messages.success(request, f"Registered for {party(party_size)}.")
         elif changing_size and party_size != previous_size:
             registration.party_size = party_size
             registration.save(update_fields=["party_size"])
@@ -425,7 +431,7 @@ def cancel_registration(request, pk):
     if registration:
         messages.success(
             request,
-            "Your registration has been cancelled.",
+            "Registration cancelled.",
         )
     else:
         messages.info(
@@ -561,31 +567,46 @@ class EventDetailView(DetailView):
         if context["can_manage"]:
             context["recipient_count"] = interested_recipients(event).count()
 
-        # Find contact requests sent by the current user.
+        # Contact requests are per pair of users, even if they began at
+        # another event or the current viewer was the recipient.
         request_by_recipient = {}
 
         if is_authenticated:
             requests = (
                 ContactRequest.objects.filter(
-                    event=event,
-                    sender=user,
+                    Q(sender=user) | Q(recipient=user),
+                    status__in=(
+                        ContactRequest.Status.PENDING,
+                        ContactRequest.Status.ACCEPTED,
+                    ),
                 )
-                .exclude(status=ContactRequest.Status.DECLINED)
-                .order_by("-created_at")
+                .select_related("event")
+                .order_by("-created_at", "-pk")
             )
 
             for contact_request in requests:
-                request_by_recipient.setdefault(
-                    contact_request.recipient_id,
-                    contact_request,
+                other_user_id = (
+                    contact_request.recipient_id
+                    if contact_request.sender_id == user.pk
+                    else contact_request.sender_id
                 )
+                request_by_recipient.setdefault(other_user_id, contact_request)
 
         # Include all users who have chosen to share their profiles.
         # Do not exclude the current user: their avatar should also move
         # between the two groups when they change their intention.
+        # Do not offer new contact requests to recipients with active bans.
+        active_bans = UserBan.objects.filter(
+            user_id=OuterRef("user_id"),
+            lifted_at__isnull=True,
+        )
+        active_bans = active_bans.filter(
+            Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())
+        )
         visible_interests = (
             interests.filter(user__share_profile_with_attendees=True)
             .select_related("user")
+            .annotate(recipient_banned=Exists(active_bans))
             .order_by("user__display_name", "user__username")
         )
 
@@ -594,6 +615,7 @@ class EventDetailView(DetailView):
                 "user": interest.user,
                 "status": interest.status,
                 "contact_request": request_by_recipient.get(interest.user_id),
+                "recipient_banned": interest.recipient_banned,
             }
             for interest in visible_interests
         ]

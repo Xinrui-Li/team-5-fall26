@@ -37,6 +37,7 @@
         {% endif %}
     </div>
 </header>
+{% include "events/_toasts.html" %}
 {% if user.is_authenticated %}
 <nav class="tabbar" aria-label="Main (mobile)">
     <a class="tab{% if page == 'landing' %} active{% endif %}" href="{% url 'landing' %}"{% if page == 'landing' %} aria-current="page"{% endif %}>

@@ -29,13 +29,6 @@
 <body{% block body_class %}{% endblock %}>
     {% include "events/_site_header.html" %}
   <main>
-    {% if messages %}
-      <ul class="messages" role="status">
-        {% for message in messages %}
-          <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-        {% endfor %}
-      </ul>
-    {% endif %}
     {% block content %}{% endblock %}
   </main>
   {% include "chatbot/widget.html" %}
