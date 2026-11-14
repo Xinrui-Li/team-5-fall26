@@ -336,18 +336,46 @@ the server creates (see below).
 Tests mock Gemini, so CI needs no key. Run `python manage.py test chatbot`
 for the focused tests.
 
-## Cron job (hourly sync)
+## Hourly sync
 
-The sync is **not automatic yet** — register it once per machine:
+**On Elastic Beanstalk the sync runs automatically every hour.** After each
+deployment, the postdeploy hook `.platform/sync/install_sync_timer.sh`
+installs a systemd timer (`team5-sync.timer`). Amazon Linux 2023 has no cron,
+and systemd timers are its built-in scheduler.
+
+- It runs `manage.py sync_events` at :00 every hour, as the `webapp` user, with
+  the same environment variables as the site.
+- If the instance was down at the top of the hour, the missed run starts as
+  soon as it comes back.
+- A new run never starts while the previous one is still going.
+- Each run appends its summary to `/var/log/team5_sync.log`. `eb logs`
+  includes that file.
+- On failure (feed down, bad payload), the sync exits non-zero and leaves the
+  database untouched. The next hour tries again.
+- If the timer can't be installed, the hook says why in
+  `/var/log/eb-hooks.log`, and the deployment still succeeds.
+- The environment is single-instance (`--single`). If it is ever scaled out,
+  every instance runs the sync. That is safe because each run is one
+  transaction, but wasteful.
+
+To check it on the instance (`eb ssh`):
+
+```bash
+systemctl list-timers team5-sync.timer      # next and last run
+systemctl status team5-sync.service         # result of the last run
+sudo systemctl start team5-sync.service     # run a sync now
+tail /var/log/team5_sync.log
+```
+
+**Locally** the sync is not scheduled. Run `python manage.py sync_events` when
+you want fresh data, or register it with cron once per machine:
 
 ```bash
 crontab -e
 # add this line (absolute paths only; cron has no repo dir and no venv on PATH):
-0 * * * * cd /path/to/team-5-fall26 && /path/to/.venv/bin/python manage.py sync_events >> /var/log/team5_sync.log 2>&1
+0 * * * * cd /path/to/team-5-fall26 && /path/to/.venv/bin/python manage.py sync_events >> /tmp/team5_sync.log 2>&1
 ```
 
-- Runs every hour at :00; each run prints a summary to the log file.
-- On failure (feed down, bad payload) exits non-zero and leaves the database untouched.
 - **WSL**: cron is off by default — `sudo service cron start`, then `sudo systemctl enable cron`.
 - Windows: use Task Scheduler instead — `schtasks /sc hourly /tn "Team5EventsSync" /tr "C:\path\to\python manage.py sync_events"`.
 
@@ -429,7 +457,8 @@ Optional deployment repository variables (defaults preserve the existing target)
 The repo is configured for Elastic Beanstalk's Python platform:
 `.ebextensions/django.config` sets `DJANGO_SETTINGS_MODULE`, the WSGI path
 (`config.wsgi:application`), and the `/static` mapping, and runs `migrate`,
-`collectstatic`, and an initial `sync_events` on each deploy. Settings read the
+`collectstatic`, and an initial `sync_events` on each deploy; a postdeploy
+hook then schedules the [hourly sync](#hourly-sync). Settings read the
 `RDS_*` variables that Elastic Beanstalk provides when a database is attached,
 and `*.elasticbeanstalk.com` is already in `ALLOWED_HOSTS`.
 
