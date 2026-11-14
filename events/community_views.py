@@ -30,12 +30,6 @@ def event_detail_url(event_id):
     return reverse("event_detail", args=[event_id])
 
 
-CLOSED_EVENT = (
-    "This event has ended or was cancelled, so it no longer takes new activity. "
-    "Browse upcoming events instead."
-)
-
-
 def get_open_event(event_id):
     """Return an event that still accepts interest and contact interactions."""
     event = get_object_or_404(Event, pk=event_id)
@@ -72,9 +66,7 @@ def toggle_event_interest(request, event_id):
     }
 
     if status not in valid_statuses:
-        messages.error(
-            request, "That choice isn't available. Reload the page and try again."
-        )
+        messages.error(request, "Invalid interest status. Please try again.")
         return redirect(event_detail_url(event_id))
 
     with transaction.atomic():
@@ -167,9 +159,6 @@ def create_event_reply(request, post_id):
                         f"your comment on '{post.event.title}'."
                     ),
                 )
-        messages.success(request, "Reply posted.")
-    else:
-        messages.error(request, "Write a reply before posting.")
 
         messages.success(request, "Reply posted.")
     else:
@@ -236,42 +225,6 @@ def send_contact_request(request, event_id, user_id):
         form.cleaned_data["message"],
         notification_sender=notify_contact_request,
     )
-    if contact_request is None:
-        if get_active_ban(recipient) is not None:
-            messages.error(
-                request, "Contact requests are currently unavailable for this member."
-            )
-        else:
-            messages.error(
-                request,
-                "This contact request can't be sent. Make sure you are both "
-                "interested in this upcoming event, then try again.",
-            )
-    elif contact_request.status == ContactRequest.Status.ACCEPTED:
-        messages.success(request, "You're connected. You can message them now.")
-    elif created:
-        messages.success(request, "Contact request sent.")
-    else:
-        messages.info(request, "Your contact request is already waiting for a reply.")
-
-    if contact_request is None:
-        messages.error(request, "This contact request is no longer available.")
-    elif not created:
-        if contact_request.status == ContactRequest.Status.ACCEPTED:
-            messages.info(request, "You are already connected with this person.")
-        elif contact_request.sender_id == request.user.pk:
-            messages.info(
-                request, "Your contact request is already awaiting a response."
-            )
-        else:
-            messages.info(
-                request,
-                "This person already sent you a request. Respond in notifications.",
-            )
-    elif contact_request.status == ContactRequest.Status.ACCEPTED:
-        messages.success(request, "You can now message this person.")
-    else:
-        messages.success(request, "Your contact request was sent.")
 
     if contact_request is None:
         if get_active_ban(recipient) is not None:
